@@ -1,6 +1,6 @@
 # Skills Marketplace
 
-CS162 final project. A Flask app where people post skills they can offer and request skills from others.
+CS162 final project. A Flask app where people post what they want to learn or teach.
 
 ## Run locally
 
@@ -32,7 +32,6 @@ docker run -p 5001:5001 skills-marketplace
 run.py              starts the app
 app/__init__.py     create_app(): config, database, blueprints
 app/config.py       secret key and database URL
-app/models.py       database tables
 app/routes.py       pages
 app/templates/      Jinja pages, all extend base.html
 app/static/         style.css
