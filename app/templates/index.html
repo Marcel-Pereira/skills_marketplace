@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Skills</h1>
+  {% for skill in skills %}
+    <article>
+      <h2>{{ skill.title }}</h2>
+      <p>{{ skill.description }}</p>
+      <small>by {{ skill.owner.username }}</small>
+    </article>
+  {% else %}
+    <p>No skills posted yet.</p>
+  {% endfor %}
+{% endblock %}
