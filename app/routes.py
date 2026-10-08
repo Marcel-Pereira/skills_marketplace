@@ -1,10 +1,8 @@
 from flask import Blueprint, render_template
 
-from app.models import Skill
-
 main = Blueprint("main", __name__)
 
 
 @main.route("/")
 def index():
-    return render_template("index.html", skills=Skill.query.all())
+    return render_template("index.html")
