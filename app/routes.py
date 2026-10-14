@@ -49,3 +49,37 @@ def onboarding_teach():
         return redirect(url_for("main.dashboard"))
     return render_template("onboarding.html", step=2, question="What can you teach?",
                            field="teaches", options=SKILL_OPTIONS)
+
+
+# --- Dashboard ---
+
+@main.route("/dashboard")
+def dashboard():
+    """Find people to pair with. The page has two modes, switched with ?mode= in the URL:
+    - learner: looking for people who can teach me
+    - sharer: looking for people who want to learn from me
+    With no skills picked it shows everyone, best matches for my own skills first.
+    With skills picked (?skill=Spanish&skill=Guitar) it only shows people who teach (learner)
+    or want to learn (sharer) at least one of them."""
+    mode = request.args.get("mode", "learner")
+    picked = request.args.getlist("skill")  # getlist because several skills can be picked
+
+    # In learner mode my "learns" list is matched against their "teaches" list, and the other way round
+    if mode == "sharer":
+        my_skills, their_list = CURRENT_USER["teaches"], "learns"
+    else:
+        my_skills, their_list = CURRENT_USER["learns"], "teaches"
+    wanted = picked if picked else my_skills
+
+    matches = []
+    for person in PEOPLE:
+        shared = [s for s in person[their_list] if s in wanted]
+        if picked and not shared:
+            continue  # skills were picked and this person has none of them
+        matches.append({"person": person, "shared": shared})
+
+    # Best pairs first: people who share more skills with me
+    matches.sort(key=lambda match: len(match["shared"]), reverse=True)
+
+    return render_template("dashboard.html", mode=mode, picked=picked,
+                           skills=SKILL_OPTIONS, matches=matches)
