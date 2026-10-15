@@ -1,0 +1,80 @@
+
+{% extends "base.html" %}
+
+{% block title %}Browse Skills | Skills Marketplace{% endblock %}
+
+{% block content %}
+
+<h1>Browse Skills</h1>
+<p>Find students who can teach you something new, or explore what others want to learn.</p>
+
+<!-- Use GET so the search filters appear in the URL and can be shared. -->
+<form method="GET" action="{{ url_for('skills.browse') }}">
+
+    <!-- Search for listings by skill name. -->
+    <label for="keyword">Search by skill:</label>
+    <input
+        type="text"
+        id="keyword"
+        name="keyword"
+        placeholder="e.g. Python"
+        value="{{ keyword }}"
+    >
+
+    <!-- Let users choose whether they want to teach or learn. -->
+    <label for="type">Listing type:</label>
+    <select id="type" name="type">
+        <option value="">All listings</option>
+        <option value="teach" {% if listing_type == "teach" %}selected{% endif %}>
+            Teach
+        </option>
+        <option value="learn" {% if listing_type == "learn" %}selected{% endif %}>
+            Learn
+        </option>
+    </select>
+
+    <button type="submit">Search</button>
+
+    <!-- Clear the search by returning to the page without URL filters. -->
+    <a href="{{ url_for('skills.browse') }}">Reset filters</a>
+
+</form>
+
+<hr>
+
+<h2>Available Listings</h2>
+
+<!-- Display the matching listings returned by the Flask route. -->
+{% if listings %}
+
+    <ul>
+        {% for listing in listings %}
+            <li>
+                <h3>{{ listing.skill.name }}</h3>
+
+                <p>
+                    <strong>Type:</strong>
+                    {{ listing.type | capitalize }}
+                </p>
+
+                <!-- Some listings may not have a description. -->
+                {% if listing.description %}
+                    <p>{{ listing.description }}</p>
+                {% endif %}
+
+                <p>
+                    <strong>Posted by:</strong>
+                    {{ listing.user.username }}
+                </p>
+            </li>
+        {% endfor %}
+    </ul>
+
+{% else %}
+
+    <!-- Give users helpful feedback when their search has no results. -->
+    <p>No matching skills. Try a different keyword or reset your filters.</p>
+
+{% endif %}
+
+{% endblock %}
