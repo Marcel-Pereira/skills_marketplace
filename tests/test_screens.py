@@ -4,7 +4,8 @@ from app.sample_data import CURRENT_USER
 
 
 @pytest.mark.parametrize("path", ["/signup", "/signin", "/onboarding/learn", "/onboarding/teach",
-                                  "/dashboard", "/dashboard?mode=sharer", "/profile"])
+                                  "/dashboard", "/dashboard?mode=sharer", "/profile",
+                                  "/messages", "/chat/Mateo"])
 def test_screens_load(client, path):
     assert client.get(path).status_code == 200
 
@@ -69,3 +70,15 @@ def test_profile_save_and_filter(client, monkeypatch):
 
     response = client.post("/profile", data={"learns": ["Cooking"], "then": "filter"})
     assert response.headers["Location"] == "/dashboard?mode=learner&skill=Cooking"
+
+
+def test_connect_opens_chat_and_sending_adds_message(client):
+    assert b"/chat/Wei" in client.get("/dashboard").data  # Connect button links to the chat
+    response = client.post("/chat/Wei", data={"text": "Hi Wei, can you teach me Mandarin?"})
+    assert response.headers["Location"] == "/chat/Wei"
+    assert b"can you teach me Mandarin?" in client.get("/chat/Wei").data
+    assert b"Wei" in client.get("/messages").data
+
+
+def test_chat_with_unknown_person_is_404(client):
+    assert client.get("/chat/Nobody").status_code == 404
