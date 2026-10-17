@@ -21,3 +21,12 @@ PEOPLE = [
     {"name": "Sam", "teaches": ["JavaScript", "Video Editing"], "learns": ["Mandarin", "Statistics"]},
     {"name": "Wei", "teaches": ["Mandarin", "Cooking"], "learns": ["JavaScript", "Writing"]},
 ]
+
+# Chats between the signed-in user and other people, keyed by the other person's name.
+# Each message records who sent it ("You" or their name) and the text.
+MESSAGES = {
+    "Mateo": [
+        {"sender": "You", "text": "Hi Mateo! I'd love to learn some Spanish."},
+        {"sender": "Mateo", "text": "Happy to help! And I'd like to learn Python, maybe we can swap?"},
+    ],
+}

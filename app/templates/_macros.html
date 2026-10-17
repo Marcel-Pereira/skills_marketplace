@@ -23,6 +23,7 @@
 {% macro signed_in_nav() %}
   <span>
     <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('main.messages') }}">Messages</a>
     <a href="{{ url_for('main.profile') }}">Profile</a>
     <a href="{{ url_for('main.index') }}">Sign out</a>
   </span>
