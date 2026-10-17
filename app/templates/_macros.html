@@ -1,0 +1,30 @@
+{# Reusable pieces shared by several pages. Import with:
+   {% from "_macros.html" import chip_picker, signed_in_nav %} #}
+
+{# Skill chips plus a box to type your own (used in onboarding and the profile).
+   Each chip is a checkbox inside a label, so clicking the chip selects it.
+   All chips share the same name, so the form sends every selected skill under that name.
+   "selected" pre-selects chips; selected skills that aren't in "options" get their own chip. #}
+{% macro chip_picker(name, options, selected=[]) %}
+  <div class="chip-picker">
+    <input class="custom-skill" data-name="{{ name }}" placeholder="Type a skill and press Enter">
+    <div class="chips">
+      {% for option in options %}
+        <label class="chip"><input type="checkbox" name="{{ name }}" value="{{ option }}" {% if option in selected %}checked{% endif %}>{{ option }}</label>
+      {% endfor %}
+      {% for option in selected if option not in options %}
+        <label class="chip"><input type="checkbox" name="{{ name }}" value="{{ option }}" checked>{{ option }}</label>
+      {% endfor %}
+    </div>
+  </div>
+{% endmacro %}
+
+{# Links shown in the nav once someone is signed in #}
+{% macro signed_in_nav() %}
+  <span>
+    <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('main.messages') }}">Messages</a>
+    <a href="{{ url_for('main.profile') }}">Profile</a>
+    <a href="{{ url_for('main.index') }}">Sign out</a>
+  </span>
+{% endmacro %}

@@ -1,2 +1,75 @@
-body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 16px; line-height: 1.5; }
-nav { padding-bottom: 12px; margin-bottom: 24px; border-bottom: 1px solid #ddd; }
+/* Page layout */
+body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 16px; line-height: 1.5; color: #222; }
+nav { display: flex; justify-content: space-between; padding-bottom: 12px; margin-bottom: 24px; border-bottom: 1px solid #ddd; }
+nav .brand { font-weight: bold; color: inherit; text-decoration: none; }
+nav span a { margin-left: 16px; }
+.muted { color: #777; }
+
+/* Centered box for the home, sign up and sign in screens */
+.box { max-width: 360px; margin: 48px auto 0; padding: 32px; border: 1px solid #eee; border-radius: 12px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06); text-align: center; }
+.box h1 { margin: 0 0 6px; font-size: 1.8em; }
+.box > .muted { margin: 0 0 28px; }  /* the subtitle: close to the title, clear gap before the form or buttons */
+.box .stack { max-width: none; text-align: left; }
+.below-box { text-align: center; margin-top: 16px; }
+
+/* Forms: fields stacked one per line */
+.stack { display: flex; flex-direction: column; gap: 18px; max-width: 360px; }
+.stack label { display: flex; flex-direction: column; gap: 6px; }  /* small gap between a label and its input */
+.stack button { margin-top: 6px; padding: 10px 16px; }
+input, select, button { font: inherit; padding: 8px; border: 1px solid #ccc; border-radius: 6px; }
+.custom-skill { width: 100%; box-sizing: border-box; }
+
+/* Buttons (also used on links with class="button") */
+button, .button { background: #222; color: #fff; border: none; padding: 8px 16px; cursor: pointer; text-decoration: none; border-radius: 6px; }
+.button.secondary, button.secondary { background: #eee; color: #222; }
+.actions { display: flex; gap: 8px; }  /* buttons side by side */
+.button.wide { display: block; padding: 10px 16px; }  /* full-width button, e.g. on the home box */
+.button.wide + .button.wide { margin-top: 12px; }  /* space between two stacked buttons */
+
+/* Chips: rounded skill tags. In onboarding and the profile they wrap a hidden checkbox,
+   and turn dark when that checkbox is selected. */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 24px; }
+.chip { display: inline-block; padding: 6px 14px; margin: 2px; border: 1px solid #ddd; border-radius: 999px; background: #f7f7f7; }
+label.chip { cursor: pointer; }
+.chip input { display: none; }
+.chip:has(input:checked) { background: #222; color: #fff; border-color: #222; }
+
+/* Dashboard */
+.filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 24px 0; }  /* toggle + picked chips on one line */
+.filter { position: relative; }
+.filter summary { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; list-style: none; }
+.filter summary::-webkit-details-marker { display: none; }  /* hide Safari's default triangle */
+.filter[open] summary { border-color: #222; }
+/* The open list floats over the page instead of pushing the cards down */
+.filter .count { background: #222; color: #fff; border-radius: 999px; padding: 0 8px; font-size: 0.85em; }  /* number of picked skills */
+.dropdown { position: absolute; z-index: 1; margin-top: 4px; padding: 12px; min-width: 280px; max-width: 360px; max-height: 260px; overflow-y: auto;
+            background: #fff; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+.dropdown label { display: flex; align-items: center; gap: 10px; padding: 8px 6px; cursor: pointer; }
+.dropdown input[type="checkbox"] { width: 18px; height: 18px; margin: 0; padding: 0; accent-color: #222; }
+
+/* The × on a picked skill chip */
+.chip a { margin-left: 8px; color: inherit; text-decoration: none; font-size: 1.1em; }
+.card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+.card h3 { margin: 0; }
+
+/* Learner / Sharer switch: two links that look like one toggle */
+.mode-switch { display: inline-flex; border: 1px solid #222; border-radius: 6px; overflow: hidden; }
+.mode-switch a { padding: 6px 18px; color: #222; text-decoration: none; }
+.mode-switch a.active { background: #222; color: #fff; }
+
+/* Skills a person shares with me: same dark style as a selected chip */
+.chip.match { background: #222; color: #fff; border-color: #222; }
+
+/* Dashboard card: name on the left, Connect button on the right */
+.card-header { display: flex; justify-content: space-between; align-items: center; }
+
+/* Messages list: each chat is a whole clickable card */
+.conversation { display: block; color: inherit; text-decoration: none; }
+.conversation p { margin: 4px 0 0; }
+
+/* Chat: bubbles stacked top to bottom, mine pushed to the right */
+.chat { display: flex; flex-direction: column; gap: 8px; margin: 24px 0; }
+.message { max-width: 70%; margin: 0; padding: 8px 14px; border-radius: 12px; background: #f0f0f0; align-self: flex-start; }
+.message.mine { background: #222; color: #fff; align-self: flex-end; }
+.send { display: flex; gap: 8px; }
+.send input { flex: 1; }
