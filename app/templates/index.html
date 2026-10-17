@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-  <h1>Skills Marketplace</h1>
-  <p>The app is running.</p>
+  <div class="box">
+    <h1>Skills Marketplace</h1>
+    <p class="muted">Find people to learn from, and share what you know.</p>
+    <a class="button wide" href="{{ url_for('main.signup') }}">Sign up</a>
+    <a class="button secondary wide" href="{{ url_for('main.signin') }}">Sign in</a>
+  </div>
 {% endblock %}
