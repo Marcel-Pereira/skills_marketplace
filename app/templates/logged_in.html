@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Logged in | Skills Marketplace{% endblock %}
+{% block content %}
+  <section class="auth-card">
+    <h1>Logged in</h1>
+    <p>You are logged in as <strong>{{ current_user.username }}</strong>.</p>
+  </section>
+{% endblock %}
