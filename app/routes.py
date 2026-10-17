@@ -30,3 +30,22 @@ def signin():
     if request.method == "POST":
         return redirect(url_for("main.dashboard"))
     return render_template("signin.html")
+
+
+# --- Onboarding ---
+# Both steps share onboarding.html; only the question, the field name and the next page change.
+
+@main.route("/onboarding/learn", methods=["GET", "POST"])
+def onboarding_learn():
+    if request.method == "POST":
+        return redirect(url_for("main.onboarding_teach"))
+    return render_template("onboarding.html", step=1, question="What do you want to learn?",
+                           field="learns", options=SKILL_OPTIONS)
+
+
+@main.route("/onboarding/teach", methods=["GET", "POST"])
+def onboarding_teach():
+    if request.method == "POST":
+        return redirect(url_for("main.dashboard"))
+    return render_template("onboarding.html", step=2, question="What can you teach?",
+                           field="teaches", options=SKILL_OPTIONS)
