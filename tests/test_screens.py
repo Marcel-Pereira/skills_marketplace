@@ -1,8 +1,10 @@
 import pytest
 
+from app.sample_data import CURRENT_USER
+
 
 @pytest.mark.parametrize("path", ["/signup", "/signin", "/onboarding/learn", "/onboarding/teach",
-                                  "/dashboard", "/dashboard?mode=sharer"])
+                                  "/dashboard", "/dashboard?mode=sharer", "/profile"])
 def test_screens_load(client, path):
     assert client.get(path).status_code == 200
 
@@ -48,3 +50,22 @@ def test_removing_one_picked_skill_keeps_the_others(client):
 def test_logo_links_to_dashboard_when_signed_in(client):
     assert b'<a class="brand" href="/dashboard">Skills Marketplace</a>' in client.get("/dashboard").data
     assert b'<a class="brand" href="/">Skills Marketplace</a>' in client.get("/signin").data
+
+
+def test_profile_preselects_my_skills(client):
+    page = client.get("/profile").data.decode()
+    assert 'value="Spanish" checked' in page
+    assert 'value="JavaScript" checked' not in page
+
+
+def test_profile_save_and_filter(client, monkeypatch):
+    # monkeypatch puts the sample user's skills back after the test
+    monkeypatch.setitem(CURRENT_USER, "learns", CURRENT_USER["learns"])
+    monkeypatch.setitem(CURRENT_USER, "teaches", CURRENT_USER["teaches"])
+
+    response = client.post("/profile", data={"learns": ["Cooking"], "teaches": ["Python"]})
+    assert response.headers["Location"] == "/dashboard"
+    assert CURRENT_USER["learns"] == ["Cooking"]
+
+    response = client.post("/profile", data={"learns": ["Cooking"], "then": "filter"})
+    assert response.headers["Location"] == "/dashboard?mode=learner&skill=Cooking"
