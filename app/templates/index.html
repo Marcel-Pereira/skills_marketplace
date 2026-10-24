@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-  <h1>Skills Marketplace</h1>
-  <p>The app is running.</p>
-  {% if not current_user.is_authenticated %}
-    <p><a href="{{ url_for('main.signup') }}">Create an account</a> or <a href="{{ url_for('main.login') }}">log in</a>.</p>
-  {% endif %}
+  <div class="box">
+    <h1>Skills Marketplace</h1>
+    <p class="muted">Find people to learn from, and share what you know.</p>
+    <a class="button wide" href="{{ url_for('main.signup') }}">Sign up</a>
+    <a class="button secondary wide" href="{{ url_for('main.login') }}">Sign in</a>
+  </div>
 {% endblock %}

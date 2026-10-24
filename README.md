@@ -13,6 +13,18 @@ python run.py
 
 Then open http://127.0.0.1:5001.
 
+### Shortcuts (macOS/Linux)
+
+Run these from the project root. They use `.venv` directly, so activation isn't needed.
+
+```bash
+make setup  # create the virtual environment and install dependencies
+make dev    # start the app on port 5001 with hot reload
+make test   # run tests
+```
+
+Running `make` without a target also starts the app.
+
 ## Run tests
 
 ```bash
@@ -30,6 +42,7 @@ docker run -p 5001:5001 skills-marketplace
 
 ```
 run.py              starts the app
+Makefile            setup, dev and test shortcuts
 app/__init__.py     create_app(): config, database, blueprints
 app/config.py       secret key and database URL
 app/routes.py       pages

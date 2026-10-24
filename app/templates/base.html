@@ -8,18 +8,10 @@
 </head>
 <body>
   <nav>
-    <a class="brand" href="{{ url_for('main.index') }}">Skills Marketplace</a>
-    <div class="nav-links">
-      {% if current_user.is_authenticated %}
-        <a href="{{ url_for('main.logged_in') }}">Account</a>
-        <form action="{{ url_for('main.logout') }}" method="post">
-          <button class="link-button" type="submit">Log out</button>
-        </form>
-      {% else %}
-        <a href="{{ url_for('main.login') }}">Log in</a>
-        <a href="{{ url_for('main.signup') }}">Sign up</a>
-      {% endif %}
-    </div>
+    {# The logo goes to the welcome page; signed-in pages override home_url to go to the dashboard #}
+    <a class="brand" href="{% block home_url %}{{ url_for('main.index') }}{% endblock %}">Skills Marketplace</a>
+    {# Pages add their own links here, e.g. the dashboard adds "Sign out" #}
+    {% block nav_links %}{% endblock %}
   </nav>
   <main>
     {% with messages = get_flashed_messages(with_categories=true) %}
