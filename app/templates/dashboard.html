@@ -52,6 +52,7 @@
     <div class="card">
       <div class="card-header">
         <h3>{{ match.person.name }}</h3>
+        <a class="button" href="{{ url_for('main.chat', name=match.person.name) }}">Connect</a>
       </div>
       <p>Can teach:
         {% for s in match.person.teaches %}<span class="chip {{ 'match' if s in match.shared }}">{{ s }}</span>{% endfor %}

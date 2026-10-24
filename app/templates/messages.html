@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "_macros.html" import signed_in_nav %}
+{% block title %}Messages{% endblock %}
+{% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
+{% block nav_links %}{{ signed_in_nav() }}{% endblock %}
+{% block content %}
+  <h1>Messages</h1>
+
+  {# Only chats with at least one message are listed; the last message is shown as a preview #}
+  {% for name, conversation in conversations.items() if conversation %}
+    <a class="card conversation" href="{{ url_for('main.chat', name=name) }}">
+      <h3>{{ name }}</h3>
+      <p class="muted">{{ conversation[-1].sender }}: {{ conversation[-1].text }}</p>
+    </a>
+  {% else %}
+    <p class="muted">No chats yet. Press Connect on someone in the <a href="{{ url_for('main.dashboard') }}">dashboard</a> to start one.</p>
+  {% endfor %}
+{% endblock %}

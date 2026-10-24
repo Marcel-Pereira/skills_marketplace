@@ -84,6 +84,18 @@ def test_profile_save_and_filter(authenticated_client, monkeypatch):
     response = authenticated_client.post("/profile", data={"learns": ["Cooking"], "then": "filter"})
     assert response.headers["Location"] == "/dashboard?mode=learner&skill=Cooking"
 
+
+def test_connect_opens_chat_and_sending_adds_message(authenticated_client):
+    assert b"/chat/Wei" in authenticated_client.get("/dashboard").data  # Connect button links to the chat
+    response = authenticated_client.post("/chat/Wei", data={"text": "Hi Wei, can you teach me Mandarin?"})
+    assert response.headers["Location"] == "/chat/Wei"
+    assert b"can you teach me Mandarin?" in authenticated_client.get("/chat/Wei").data
+    assert b"Wei" in authenticated_client.get("/messages").data
+
+
+def test_chat_with_unknown_person_is_404(authenticated_client):
+    assert authenticated_client.get("/chat/Nobody").status_code == 404
+
 def test_logo_links_to_dashboard_when_signed_in(authenticated_client):
     assert b'<a class="brand" href="/dashboard">Skills Marketplace</a>' in authenticated_client.get("/dashboard").data
 

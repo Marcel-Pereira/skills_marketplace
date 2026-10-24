@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "_macros.html" import signed_in_nav %}
+{% block title %}Chat with {{ name }}{% endblock %}
+{% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
+{% block nav_links %}{{ signed_in_nav() }}{% endblock %}
+{% block content %}
+  <p><a href="{{ url_for('main.messages') }}">← All messages</a></p>
+  <h1>{{ name }}</h1>
+
+  {# My messages sit on the right in dark, theirs on the left in grey #}
+  <div class="chat">
+    {% for message in conversation %}
+      <p class="message {{ 'mine' if message.sender == 'You' }}">{{ message.text }}</p>
+    {% else %}
+      <p class="muted">Say hi to {{ name }} and tell them what you'd like to learn or share.</p>
+    {% endfor %}
+  </div>
+
+  <form method="post" class="send">
+    <input name="text" placeholder="Write a message" required autocomplete="off">
+    <button>Send</button>
+  </form>
+{% endblock %}

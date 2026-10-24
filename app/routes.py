@@ -1,6 +1,6 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
-from app.sample_data import SKILL_OPTIONS, CURRENT_USER, PEOPLE
+from app.sample_data import SKILL_OPTIONS, CURRENT_USER, PEOPLE, MESSAGES
 from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
@@ -167,3 +167,31 @@ def profile():
             return redirect(url_for("main.dashboard", mode="learner", skill=CURRENT_USER["learns"]))
         return redirect(url_for("main.dashboard"))
     return render_template("profile.html", user=CURRENT_USER, options=SKILL_OPTIONS)
+
+
+# --- Messages ---
+
+@main.route("/messages")
+@login_required
+def messages():
+    """Everyone I have a chat with."""
+    return render_template("messages.html", conversations=MESSAGES)
+
+
+@main.route("/chat/<name>", methods=["GET", "POST"])
+@login_required
+def chat(name):
+    """My chat with one person. "Connect" on the dashboard opens this page."""
+    if name not in [person["name"] for person in PEOPLE]:
+        abort(404)
+
+    # Start an empty chat the first time someone connects
+    conversation = MESSAGES.setdefault(name, [])
+
+    if request.method == "POST":
+        # Messages are only kept in memory for now, so they disappear when the server restarts
+        conversation.append({"sender": "You", "text": request.form["text"]})
+        # Redirect after sending, so refreshing the page doesn't send the message twice
+        return redirect(url_for("main.chat", name=name))
+
+    return render_template("chat.html", name=name, conversation=conversation)
