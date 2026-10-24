@@ -1,7 +1,7 @@
 import pytest
 
 
-@pytest.mark.parametrize("path", ["/signup", "/signin", "/onboarding/learn", "/onboarding/teach",
+@pytest.mark.parametrize("path", ["/signup", "/login", "/onboarding/learn", "/onboarding/teach",
                                   "/dashboard", "/dashboard?mode=sharer"])
 def test_screens_load(client, path):
     assert client.get(path).status_code == 200
@@ -47,4 +47,4 @@ def test_removing_one_picked_skill_keeps_the_others(client):
 
 def test_logo_links_to_dashboard_when_signed_in(client):
     assert b'<a class="brand" href="/dashboard">Skills Marketplace</a>' in client.get("/dashboard").data
-    assert b'<a class="brand" href="/">Skills Marketplace</a>' in client.get("/signin").data
+    assert b'<a class="brand" href="/">Skills Marketplace</a>' in client.get("/login").data

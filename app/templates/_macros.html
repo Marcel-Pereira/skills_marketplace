@@ -21,8 +21,10 @@
 
 {# Links shown in the nav once someone is signed in #}
 {% macro signed_in_nav() %}
-  <span>
+  <div class="signed-in-nav">
     <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
-    <a href="{{ url_for('main.index') }}">Sign out</a>
-  </span>
+    <form method="post" action="{{ url_for('main.logout') }}">
+      <button type="submit">Sign out</button>
+    </form>
+  </div>
 {% endmacro %}
