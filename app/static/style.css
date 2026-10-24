@@ -2,7 +2,9 @@
 body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 16px; line-height: 1.5; color: #222; }
 nav { display: flex; justify-content: space-between; padding-bottom: 12px; margin-bottom: 24px; border-bottom: 1px solid #ddd; }
 nav .brand { font-weight: bold; color: inherit; text-decoration: none; }
-nav span a { margin-left: 16px; }
+.signed-in-nav { display: flex; align-items: center; gap: 16px; }
+.signed-in-nav form { margin: 0; }
+.signed-in-nav button { background: none; color: #00e; padding: 0; border-radius: 0; text-decoration: underline; }
 .muted { color: #777; }
 
 /* Centered box for the home, sign up and sign in screens */

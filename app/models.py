@@ -1,7 +1,10 @@
 """Database models for the skills marketplace (users, skills, listings)."""
 import datetime as dt
 
-from app import db
+from flask_login import UserMixin
+from werkzeug.security import check_password_hash, generate_password_hash
+
+from app import db, login_manager
 
 
 # Simple function to get the current UTC time. Used as a default value for created_at columns.
@@ -10,7 +13,7 @@ def utcnow():
 
 
 # User table, has login info and profile info
-class User(db.Model):
+class User(UserMixin, db.Model):
     __tablename__ = "users"  # "user" is a reserved word in PostgreSQL
 
     id = db.Column(db.Integer, primary_key=True)
@@ -23,6 +26,23 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
 
     listings = db.relationship("Listing", back_populates="user")
+
+    def set_password(self, password):
+        """Hash a plaintext password before storing it."""
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        """Return whether a plaintext password matches the stored hash."""
+        return check_password_hash(self.password_hash, password)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Restore the signed-in user from the ID saved in the Flask session."""
+    try:
+        return db.session.get(User, int(user_id))
+    except (TypeError, ValueError):
+        return None
 
 
 # Skill table, has info about possible skills that users can teach or learn. Each skill can have multiple listings.
