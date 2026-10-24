@@ -88,6 +88,12 @@ def login():
 
     return render_template("login.html")
 
+@main.post("/logout")
+@login_required
+def logout():
+    logout_user()
+    flash("You have been logged out.", "info")
+    return redirect(url_for("main.login"))
 
 # --- Onboarding ---
 # Both steps share onboarding.html; only the question, the field name and the next page change.
@@ -144,9 +150,20 @@ def dashboard():
     return render_template("dashboard.html", mode=mode, picked=picked,
                            skills=SKILL_OPTIONS, matches=matches)
 
-@main.post("/logout")
+
+# --- Profile ---
+
+@main.route("/profile", methods=["GET", "POST"])
 @login_required
-def logout():
-    logout_user()
-    flash("You have been logged out.", "info")
-    return redirect(url_for("main.login"))
+def profile():
+    """Change what you picked during onboarding. Uses the same chip pickers, pre-selected."""
+    if request.method == "POST":
+        # Kept in memory for now (like chat messages), so changes are lost when the server restarts
+        CURRENT_USER["learns"] = request.form.getlist("learns")
+        CURRENT_USER["teaches"] = request.form.getlist("teaches")
+
+        # "Save and filter by these" opens the dashboard already filtered by what I want to learn
+        if request.form.get("then") == "filter":
+            return redirect(url_for("main.dashboard", mode="learner", skill=CURRENT_USER["learns"]))
+        return redirect(url_for("main.dashboard"))
+    return render_template("profile.html", user=CURRENT_USER, options=SKILL_OPTIONS)
