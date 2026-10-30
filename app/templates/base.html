@@ -8,9 +8,17 @@
 </head>
 <body>
   <nav>
-    <a href="{{ url_for('main.index') }}">Skills Marketplace</a>
+    {# The logo goes to the welcome page; signed-in pages override home_url to go to the dashboard #}
+    <a class="brand" href="{% block home_url %}{{ url_for('main.index') }}{% endblock %}">Skills Marketplace</a>
+    {# Pages add their own links here, e.g. the dashboard adds "Sign out" #}
+    {% block nav_links %}{% endblock %}
   </nav>
   <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}" role="alert">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
     {% block content %}{% endblock %}
   </main>
 </body>

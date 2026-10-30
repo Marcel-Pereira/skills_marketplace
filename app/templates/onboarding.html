@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "_macros.html" import chip_picker %}
+{% block title %}Get started{% endblock %}
+{% block content %}
+  <p class="muted">Step {{ step }} of 2</p>
+  <h1>{{ question }}</h1>
+
+  <form method="post">
+    <p class="muted">Pick as many as you like, or type your own and press Enter.</p>
+    {{ chip_picker(field, options) }}
+    <button>Continue</button>
+  </form>
+
+  <script src="{{ url_for('static', filename='chips.js') }}"></script>
+{% endblock %}

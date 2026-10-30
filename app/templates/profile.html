@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_macros.html" import chip_picker, signed_in_nav %}
+{% block title %}Profile{% endblock %}
+{% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
+{% block nav_links %}{{ signed_in_nav() }}{% endblock %}
+{% block content %}
+  <h1>Your profile</h1>
+  <p class="muted">Signed in as {{ user.name }}. Change your skills any time; the dashboard uses them to find your matches.</p>
+
+  <form method="post">
+    <h2>What do you want to learn?</h2>
+    {{ chip_picker("learns", options, user.learns) }}
+
+    <h2>What can you teach?</h2>
+    {{ chip_picker("teaches", options, user.teaches) }}
+
+    {# Both buttons submit the same form; "then" tells the route where to go after saving #}
+    <div class="actions">
+      <button>Save</button>
+      <button name="then" value="filter" class="secondary">Save and filter by these</button>
+    </div>
+  </form>
+
+  <script src="{{ url_for('static', filename='chips.js') }}"></script>
+{% endblock %}
