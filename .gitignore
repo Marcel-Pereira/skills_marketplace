@@ -224,3 +224,6 @@ __marimo__/
 *.db
 .env
 instance/
+
+# Local backup virtual environment
+.venv-python39/

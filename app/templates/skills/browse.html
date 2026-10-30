@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% from "_macros.html" import signed_in_nav %}
+
+{% block title %}Browse Skills | Skills Marketplace{% endblock %}
+
+{% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
+
+{% block nav_links %}
+  {{ signed_in_nav() }}
+{% endblock %}
+
+{% block content %}
+
+<h1>Browse Skills</h1>
+<p class="muted">
+  Find students who can teach you something new, or explore what others want to learn.
+</p>
+
+<form class="filter-row" method="GET" action="{{ url_for('skills.browse') }}">
+  <label for="keyword">Search by skill:</label>
+  <input
+    type="text"
+    id="keyword"
+    name="keyword"
+    placeholder="e.g. Python"
+    value="{{ keyword }}"
+  >
+
+  <label for="type">Listing type:</label>
+  <select id="type" name="type">
+    <option value="">All listings</option>
+    <option value="teach" {% if listing_type == "teach" %}selected{% endif %}>Teach</option>
+    <option value="learn" {% if listing_type == "learn" %}selected{% endif %}>Learn</option>
+  </select>
+
+  <button type="submit">Search</button>
+  <a href="{{ url_for('skills.browse') }}">Reset filters</a>
+</form>
+
+<h2>Available Listings</h2>
+
+{% if listings %}
+  {% for listing in listings %}
+    <article class="card">
+      <h3>{{ listing.skill.name }}</h3>
+
+      <p><strong>Type:</strong> {{ listing.type | capitalize }}</p>
+
+      {% if listing.description %}
+        <p>{{ listing.description }}</p>
+      {% endif %}
+
+      <p class="muted">
+        <strong>Posted by:</strong> {{ listing.user.username }}
+      </p>
+    </article>
+  {% endfor %}
+{% else %}
+  <p class="muted">
+    No matching skills. Try a different keyword or reset your filters.
+  </p>
+{% endif %}
+
+{% endblock %}
