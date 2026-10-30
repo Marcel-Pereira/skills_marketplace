@@ -21,6 +21,10 @@ def create_app(test_config=None):
     from app.routes import main
     app.register_blueprint(main)
 
+    # Register the skills browsing feature.
+    from app.skills import skills
+    app.register_blueprint(skills)
+
     from app import models
 
     with app.app_context():
