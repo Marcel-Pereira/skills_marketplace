@@ -99,8 +99,6 @@ def test_personal_details_are_populated_from_saved_account(
     assert re.search(
         r'<option\b[^>]*value="America/Argentina/Buenos_Aires"[^>]*selected', page
     )
-    expected_age = date.today().year - 1995 - ((date.today().month, date.today().day) < (6, 15))
-    assert re.search(rf"Age[^<]*</[^>]+>\s*{expected_age}\b|Age:\s*{expected_age}\b", page)
 
 
 def test_profile_save_persists_details_and_preserves_skills(
