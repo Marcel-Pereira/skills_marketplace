@@ -67,7 +67,7 @@ def test_logo_links_to_dashboard_when_signed_in(client):
 
 
 def test_profile_preselects_my_skills(authenticated_client):
-    page = authenticated_client.get("/profile").data.decode()
+    page = authenticated_client.get("/profile?tab=skills").data.decode()
     assert 'value="Spanish" checked' in page
     assert 'value="JavaScript" checked' not in page
 

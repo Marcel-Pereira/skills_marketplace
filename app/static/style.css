@@ -75,3 +75,30 @@ label.chip { cursor: pointer; }
 .message.mine { background: #222; color: #fff; align-self: flex-end; }
 .send { display: flex; gap: 8px; }
 .send input { flex: 1; }
+
+/* Profile: familiar cards with separate personal-details and skills forms. */
+.profile-identity { overflow-wrap: anywhere; margin: 6px 0px 32px; font-size: 24px; font-weight: bold; }
+.profile-tabs { padding: 0; margin: 0 0 16px; }
+.profile-section h2 { margin: 0 0 18px; font-size: 1.25em; }
+.profile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.profile-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.profile-field-wide { grid-column: 1 / -1; }
+.profile-field input, .profile-field select, .profile-field textarea { width: 100%; min-width: 0; box-sizing: border-box; }
+.profile-field textarea { font: inherit; padding: 8px; border: 1px solid #ccc; border-radius: 6px; resize: vertical; }
+.profile-age { align-self: end; margin: 0; padding-bottom: 8px; }
+.profile-error { color: #b42318; margin: 0; }
+.profile-field [aria-invalid="true"] { border-color: #b42318; }
+.profile-actions { flex-wrap: wrap; }
+.profile-skills .chip { position: relative; }
+.profile-skills .chip input { display: block; position: absolute; width: 1px; height: 1px; opacity: 0; }
+.profile-skills .chip:has(input:focus-visible) { outline: 2px solid #222; outline-offset: 2px; }
+.profile h1 {
+    margin: 0
+}
+
+@media (max-width: 600px) {
+  body > nav { flex-wrap: wrap; gap: 12px; }
+  .signed-in-nav { flex-wrap: wrap; gap: 12px; }
+  .profile-fields { grid-template-columns: minmax(0, 1fr); }
+  .profile-age { padding-bottom: 0; }
+}
