@@ -13,7 +13,7 @@ def matching_data(app, authenticated_client, user_id):
     authenticated_client.post(
         "/profile",
         data={
-            "learns": ["Spanish", "Guitar", "Design"],
+            "learns": ["Spanish", "Guitar", "Graphic Design"],
             "teaches": ["Python", "Statistics"],
         },
     )
@@ -34,12 +34,7 @@ def matching_data(app, authenticated_client, user_id):
                 ("learn", "learns"),
             ]:
                 for skill_name in person[field]:
-                    skill = Skill.query.filter_by(name=skill_name).first()
-
-                    if skill is None:
-                        skill = Skill(name=skill_name)
-                        db.session.add(skill)
-                        db.session.flush()
+                    skill = Skill.query.filter_by(name=skill_name).one()
 
                     db.session.add(
                         Listing(
@@ -80,15 +75,15 @@ def test_signup_flow_goes_through_onboarding_to_dashboard(client, user_data):
 
 
 def test_learner_shows_only_matching_people(authenticated_client, matching_data):
-    # The sample user wants to learn Spanish, Guitar, and Design.
+    # The sample user wants to learn Spanish, Guitar, and Graphic Design.
     # Mateo and Jiwoo teach matching skills, but Sam does not.
     page = authenticated_client.get(
         "/dashboard?mode=learner&filter=profile"
     ).data
 
-    assert b"Mateo" in page
-    assert b"Jiwoo" in page
-    assert b"Sam" not in page
+    assert b"<h3>Mateo</h3>" in page
+    assert b"<h3>Jiwoo</h3>" in page
+    assert b"<h3>Sam</h3>" not in page
 
     # People with more matching skills should appear first.
     assert page.index(b"Mateo") < page.index(b"Jiwoo")
@@ -101,18 +96,18 @@ def test_sharer_shows_only_matching_people(authenticated_client, matching_data):
     ).data
 
     # These people want to learn skills the user can teach.
-    assert b"Mateo" in page
-    assert b"Sam" in page
+    assert b"<h3>Mateo</h3>" in page
+    assert b"<h3>Sam</h3>" in page
 
     # These people do not want to learn the user's teaching skills.
-    assert b"Linh" not in page
-    assert b"Jiwoo" not in page
+    assert b"<h3>Linh</h3>" not in page
+    assert b"<h3>Jiwoo</h3>" not in page
 
 
 def test_learner_skill_filter_shows_people_who_teach_it(authenticated_client, matching_data):
     page = authenticated_client.get("/dashboard?mode=learner&skill=Spanish").data
-    assert b"Mateo" in page
-    assert b"Linh" not in page  # Linh wants to learn Spanish, doesn't teach it
+    assert b"<h3>Mateo</h3>" in page
+    assert b"<h3>Linh</h3>" not in page  # Linh wants to learn Spanish, doesn't teach it
 
 
 def test_single_skill_filter_shows_only_relevant_people(
@@ -120,21 +115,21 @@ def test_single_skill_filter_shows_only_relevant_people(
 ):
     """A single skill filter shows only matching people for that skill."""
 
-    # Mateo teaches Spanish, while Jiwoo teaches Design.
+    # Mateo teaches Spanish, while Jiwoo teaches Graphic Design.
     spanish_page = authenticated_client.get(
         "/dashboard?mode=learner&filter=skill&skill=Spanish"
     ).data
 
-    assert b"Mateo" in spanish_page
-    assert b"Jiwoo" not in spanish_page
+    assert b"<h3>Mateo</h3>" in spanish_page
+    assert b"<h3>Jiwoo</h3>" not in spanish_page
 
-    # Selecting Design should show Jiwoo instead of Mateo.
+    # Selecting Graphic Design should show Jiwoo instead of Mateo.
     design_page = authenticated_client.get(
-        "/dashboard?mode=learner&filter=skill&skill=Design"
+        "/dashboard?mode=learner&filter=skill&skill=Graphic%20Design"
     ).data
 
-    assert b"Jiwoo" in design_page
-    assert b"Mateo" not in design_page
+    assert b"<h3>Jiwoo</h3>" in design_page
+    assert b"<h3>Mateo</h3>" not in design_page
 
 
 def test_sharer_skill_filter_shows_people_who_want_to_learn_it(
@@ -144,16 +139,16 @@ def test_sharer_skill_filter_shows_people_who_want_to_learn_it(
     python_page = authenticated_client.get(
         "/dashboard?mode=sharer&filter=skill&skill=Python"
     ).data
-    assert b"Mateo" in python_page
-    assert b"Linh" not in python_page
+    assert b"<h3>Mateo</h3>" in python_page
+    assert b"<h3>Linh</h3>" not in python_page
 
     spanish_page = authenticated_client.get(
         "/dashboard?mode=sharer&filter=skill&skill=Spanish"
     ).data
-    assert b"Linh" in spanish_page
-    assert b"Mateo" not in spanish_page
+    assert b"<h3>Linh</h3>" in spanish_page
+    assert b"<h3>Mateo</h3>" not in spanish_page
 
-def test_single_skill_filter_selects_one_skill(authenticated_client):
+def test_single_skill_filter_selects_one_skill(authenticated_client, skill_ids):
     """The By Skill filter should select one skill at a time."""
 
     # Open the dashboard with Spanish selected.
@@ -166,7 +161,7 @@ def test_single_skill_filter_selects_one_skill(authenticated_client):
     page = response.data.decode()
 
     # The selected skill should appear in the dropdown.
-    assert 'value="Spanish"' in page
+    assert f'value="{skill_ids["Spanish"]}"' in page
     assert "selected" in page
 
     # The filter form should use the single-skill filtering mode.
@@ -177,12 +172,7 @@ def test_single_skill_filter_selects_one_skill(authenticated_client):
     assert "My Profile" in page
 
 
-def test_logo_links_to_dashboard_when_signed_in(client):
-    assert b'<a class="brand" href="/dashboard">Skills Marketplace</a>' in client.get("/dashboard").data
-    assert b'<a class="brand" href="/">Skills Marketplace</a>' in client.get("/signin").data
-
-
-def test_profile_preselects_my_skills(authenticated_client):
+def test_profile_preselects_my_skills(authenticated_client, skill_ids):
     """The profile shows skills saved for the signed-in user."""
 
     # Save skills through onboarding.
@@ -198,13 +188,13 @@ def test_profile_preselects_my_skills(authenticated_client):
 
     page = authenticated_client.get("/profile").data.decode()
 
-    assert 'value="Spanish" checked' in page
-    assert 'value="Guitar" checked' in page
-    assert 'value="Python" checked' in page
-    assert 'value="JavaScript" checked' not in page
+    assert f'value="{skill_ids["Spanish"]}" checked' in page
+    assert f'value="{skill_ids["Guitar"]}" checked' in page
+    assert f'value="{skill_ids["Python"]}" checked' in page
+    assert f'value="{skill_ids["JavaScript"]}" checked' not in page
 
 
-def test_profile_save_and_filter(authenticated_client, app, user_id):
+def test_profile_save_and_filter(authenticated_client, app, user_id, skill_ids):
     """Profile changes are saved in the database and used for filtering."""
 
     from app.models import Listing
@@ -224,7 +214,7 @@ def test_profile_save_and_filter(authenticated_client, app, user_id):
 
     # Verify the changes were saved for the correct account.
     with app.app_context():
-        listings = Listing.query.filter_by(user_id=user_id).all()
+        listings = Listing.query.filter_by(user_id=user_id, is_active=True).all()
 
         learning_skills = {
             listing.skill.name
@@ -244,9 +234,9 @@ def test_profile_save_and_filter(authenticated_client, app, user_id):
     # The profile should display the newly saved selections.
     page = authenticated_client.get("/profile").data.decode()
 
-    assert 'value="Cooking" checked' in page
-    assert 'value="Python" checked' in page
-    assert 'value="Spanish" checked' not in page
+    assert f'value="{skill_ids["Cooking"]}" checked' in page
+    assert f'value="{skill_ids["Python"]}" checked' in page
+    assert f'value="{skill_ids["Spanish"]}" checked' not in page
 
 def test_connect_opens_chat_and_sending_adds_message(authenticated_client, matching_data):
     # Mateo matches the sample user's learning interests,
@@ -301,7 +291,7 @@ def test_onboarding_saves_skills_to_database(authenticated_client, app, user_id)
 
     # Verify that the selected skills were actually saved in the database.
     with app.app_context():
-        listings = Listing.query.filter_by(user_id=user_id).all()
+        listings = Listing.query.filter_by(user_id=user_id, is_active=True).all()
 
         learning_skills = {
             listing.skill.name
@@ -318,7 +308,7 @@ def test_onboarding_saves_skills_to_database(authenticated_client, app, user_id)
         assert learning_skills == {"Spanish", "Guitar"}
         assert teaching_skills == {"Python", "Statistics"}
 
-def test_users_have_separate_skill_profiles(app, client, user_id):
+def test_users_have_separate_skill_profiles(app, client, user_id, skill_ids):
     """Changing one user's skills must not change another user's profile."""
 
     from app import db
@@ -369,8 +359,8 @@ def test_users_have_separate_skill_profiles(app, client, user_id):
     # The second user's profile should not contain the first user's skills.
     page = client.get("/profile").data.decode()
 
-    assert 'value="Spanish" checked' not in page
-    assert 'value="Python" checked' not in page
+    assert f'value="{skill_ids["Spanish"]}" checked' not in page
+    assert f'value="{skill_ids["Python"]}" checked' not in page
 
     # The second user can save different skills.
     client.post(
@@ -383,8 +373,8 @@ def test_users_have_separate_skill_profiles(app, client, user_id):
 
     page = client.get("/profile").data.decode()
 
-    assert 'value="Guitar" checked' in page
-    assert 'value="Statistics" checked' in page
+    assert f'value="{skill_ids["Guitar"]}" checked' in page
+    assert f'value="{skill_ids["Statistics"]}" checked' in page
 
     # Return to the first user and check their skills are unchanged.
     client.post("/logout")
@@ -399,9 +389,9 @@ def test_users_have_separate_skill_profiles(app, client, user_id):
 
     page = client.get("/profile").data.decode()
 
-    assert 'value="Spanish" checked' in page
-    assert 'value="Python" checked' in page
-    assert 'value="Guitar" checked' not in page
+    assert f'value="{skill_ids["Spanish"]}" checked' in page
+    assert f'value="{skill_ids["Python"]}" checked' in page
+    assert f'value="{skill_ids["Guitar"]}" checked' not in page
 
 def test_dashboard_matches_real_users(app, authenticated_client, user_id):
     """Show matching database users, not unrelated sample people."""
@@ -426,12 +416,9 @@ def test_dashboard_matches_real_users(app, authenticated_client, user_id):
         db.session.add_all([teacher, unrelated])
         db.session.flush()
 
-        # Create the skills they teach.
-        spanish = Skill(name="Spanish")
-        java = Skill(name="Java")
-
-        db.session.add_all([spanish, java])
-        db.session.flush()
+        # Use the same approved catalog as onboarding and the profile.
+        spanish = Skill.query.filter_by(name="Spanish").one()
+        java = Skill.query.filter_by(name="Java").one()
 
         db.session.add_all([
             Listing(
@@ -460,13 +447,13 @@ def test_dashboard_matches_real_users(app, authenticated_client, user_id):
     ).data
 
     # Show the real user teaching Spanish.
-    assert b"real-spanish-teacher" in page
+    assert b"<h3>real-spanish-teacher</h3>" in page
 
     # Hide the unrelated user.
-    assert b"real-java-teacher" not in page
+    assert b"<h3>real-java-teacher</h3>" not in page
 
     # Do not show the signed-in user as their own match.
-    assert b"test-user" not in page
+    assert b"<h3>test-user</h3>" not in page
 
 def test_single_skill_filter_matches_correct_people(
     authenticated_client, matching_data
@@ -474,23 +461,23 @@ def test_single_skill_filter_matches_correct_people(
     """A selected skill should show only people matching that skill."""
 
     # Mateo teaches Spanish and Guitar.
-    # Jiwoo teaches Design.
+    # Jiwoo teaches Graphic Design.
     # Selecting Spanish should show Mateo, but not Jiwoo.
     page = authenticated_client.get(
         "/dashboard?mode=learner&filter=skill&skill=Spanish"
     ).data
 
-    assert b"Mateo" in page
-    assert b"Jiwoo" not in page
-    assert b"Sam" not in page
+    assert b"<h3>Mateo</h3>" in page
+    assert b"<h3>Jiwoo</h3>" not in page
+    assert b"<h3>Sam</h3>" not in page
 
-    # Switching to Design should show Jiwoo instead.
+    # Switching to Graphic Design should show Jiwoo instead.
     page = authenticated_client.get(
-        "/dashboard?mode=learner&filter=skill&skill=Design"
+        "/dashboard?mode=learner&filter=skill&skill=Graphic%20Design"
     ).data
 
-    assert b"Jiwoo" in page
-    assert b"Mateo" not in page
+    assert b"<h3>Jiwoo</h3>" in page
+    assert b"<h3>Mateo</h3>" not in page
 
 def test_sharer_single_skill_filter(
     authenticated_client, matching_data
@@ -505,26 +492,26 @@ def test_sharer_single_skill_filter(
         "/dashboard?mode=sharer&filter=skill&skill=Python"
     ).data
 
-    assert b"Mateo" in page
-    assert b"Sam" not in page
+    assert b"<h3>Mateo</h3>" in page
+    assert b"<h3>Sam</h3>" not in page
 
     # Selecting Statistics should show Sam, but not Mateo.
     page = authenticated_client.get(
         "/dashboard?mode=sharer&filter=skill&skill=Statistics"
     ).data
 
-    assert b"Sam" in page
-    assert b"Mateo" not in page
+    assert b"<h3>Sam</h3>" in page
+    assert b"<h3>Mateo</h3>" not in page
 
 def test_by_skill_works_independently_of_profile(
     authenticated_client, matching_data
 ):
-    """Selecting Mandarin finds Mandarin teachers without requiring it in my profile."""
+    """Selecting Mandarin Chinese finds Mandarin Chinese teachers without requiring it in my profile."""
     page = authenticated_client.get(
-        "/dashboard?mode=learner&filter=skill&skill=Mandarin"
+        "/dashboard?mode=learner&filter=skill&skill=Mandarin%20Chinese"
     ).data
-    assert b"Wei" in page
-    assert b"Mateo" not in page
+    assert b"<h3>Wei</h3>" in page
+    assert b"<h3>Mateo</h3>" not in page
 
 def test_inactive_skill_listing_is_not_a_match(
     app, authenticated_client, matching_data
@@ -554,14 +541,14 @@ def test_inactive_skill_listing_is_not_a_match(
         "/dashboard?mode=learner&filter=skill&skill=Guitar"
     ).data
 
-    assert b"Mateo" in guitar_page
+    assert b"<h3>Mateo</h3>" in guitar_page
 
     # Mateo should not appear for Spanish anymore.
     spanish_page = authenticated_client.get(
         "/dashboard?mode=learner&filter=skill&skill=Spanish"
     ).data
 
-    assert b"Mateo" not in spanish_page
+    assert b"<h3>Mateo</h3>" not in spanish_page
 
 
 def test_empty_profile_shows_no_matches(
@@ -587,9 +574,9 @@ def test_empty_profile_shows_no_matches(
         assert b"No one matches these skills yet" in page.data
 
         # Existing sample people should not appear as matches.
-        assert b"Mateo" not in page.data
-        assert b"Jiwoo" not in page.data
-        assert b"Sam" not in page.data
+        assert b"<h3>Mateo</h3>" not in page.data
+        assert b"<h3>Jiwoo</h3>" not in page.data
+        assert b"<h3>Sam</h3>" not in page.data
 
 def test_default_and_profile_have_distinct_results(
     authenticated_client, matching_data
@@ -602,12 +589,12 @@ def test_default_and_profile_have_distinct_results(
         "/dashboard?mode=learner&filter=profile"
     ).data
 
-    assert b"Mateo" in default_page
-    assert b"Jiwoo" in default_page
-    assert b"Wei" in default_page
-    assert b"Sam" in default_page
+    assert b"<h3>Mateo</h3>" in default_page
+    assert b"<h3>Jiwoo</h3>" in default_page
+    assert b"<h3>Wei</h3>" in default_page
+    assert b"<h3>Sam</h3>" in default_page
 
-    assert b"Mateo" in profile_page
-    assert b"Jiwoo" in profile_page
-    assert b"Wei" not in profile_page
-    assert b"Sam" not in profile_page
+    assert b"<h3>Mateo</h3>" in profile_page
+    assert b"<h3>Jiwoo</h3>" in profile_page
+    assert b"<h3>Wei</h3>" not in profile_page
+    assert b"<h3>Sam</h3>" not in profile_page

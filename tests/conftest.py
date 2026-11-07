@@ -1,16 +1,26 @@
 import pytest
 
 from app import create_app, db
-from app.models import User
+from app.models import Skill, User
+from app.seed import seed_skills
 
 
 @pytest.fixture
 def app():
     app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
+    with app.app_context():
+        seed_skills()
     yield app
     with app.app_context():
         db.session.remove()
         db.drop_all()
+
+
+@pytest.fixture
+def skill_ids(app):
+    """The approved catalog identifiers used by the skill forms."""
+    with app.app_context():
+        return {skill.name: str(skill.id) for skill in Skill.query.all()}
 
 
 @pytest.fixture
