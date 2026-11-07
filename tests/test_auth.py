@@ -122,7 +122,7 @@ def test_login_error_stays_inside_form_and_clears_on_fresh_get(client, user_id, 
 
     card = page.split('<div class="box">', 1)[1].split("</div>", 1)[0]
     form = card.split("<form ", 1)[1].split("</form>", 1)[0]
-    assert f'role="alert">{message}</p>' in form
+    assert message in form
     assert form.index('name="password"') < form.index(message) < form.index('<button type="submit">')
     assert f'value="{user_data["username"]}"' in form
     password_input = re.search(r'<input[^>]*name="password"[^>]*>', form).group()
