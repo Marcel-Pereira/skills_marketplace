@@ -1,7 +1,13 @@
 """Upgrade the database used before categories, through the public seed command."""
 
+import os
 import sqlite3
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
+from pathlib import Path
+from threading import Barrier
 
 import pytest
 from sqlalchemy import event
@@ -76,6 +82,34 @@ def run_seed(app):
 def stored_data(connection):
     return tuple(connection.execute(f"SELECT * FROM {table} ORDER BY id").fetchall()
                  for table in ("users", "listings"))
+
+
+def test_two_seed_commands_can_upgrade_the_same_database(old_database):
+    with closing(sqlite3.connect(old_database)) as connection:
+        original = stored_data(connection)
+    start = Barrier(2)
+
+    def start_and_seed():
+        start.wait(timeout=10)
+        result = subprocess.run(
+            [sys.executable, "-m", "flask", "--app", "app", "seed"],
+            cwd=Path(__file__).resolve().parents[1],
+            env={**os.environ, "DATABASE_URL": f"sqlite:///{old_database}"},
+            capture_output=True, text=True, timeout=15,
+        )
+        assert result.returncode == 0, result.stderr
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        jobs = [pool.submit(start_and_seed) for _ in range(2)]
+        for job in jobs:
+            job.result(timeout=20)
+
+    with closing(sqlite3.connect(old_database)) as connection:
+        assert stored_data(connection) == original
+        assert connection.execute("SELECT count(*) FROM skills").fetchone() == (
+            sum(len(names) for names in CATALOG.values()) + 1,
+        )
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
 
 
 def test_upgrade_preserves_existing_accounts_listings_and_skill_identity(old_database):
