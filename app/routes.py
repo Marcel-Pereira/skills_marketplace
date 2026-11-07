@@ -73,8 +73,9 @@ def login():
         user = User.query.filter_by(username=username).first()
 
         if user is None or not user.check_password(password):
-            flash("Invalid username or password.", "error")
-            return render_template("login.html"), 401
+            return render_template(
+                "login.html", login_error="Invalid username or password."
+            ), 401
 
         login_user(user)
         return redirect(url_for("main.dashboard"))

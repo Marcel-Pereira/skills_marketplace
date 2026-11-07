@@ -1,3 +1,4 @@
+import re
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -105,6 +106,33 @@ def test_login_rejects_invalid_credentials(client, user_id, credentials):
     assert b"Invalid username or password." in response.data
     with client.session_transaction() as session:
         assert "_user_id" not in session
+
+
+def test_login_error_stays_inside_form_and_clears_on_fresh_get(client, user_id, user_data):
+    response = client.post(
+        "/login",
+        data={"username": user_data["username"], "password": "wrong-password"},
+    )
+
+    assert response.status_code == 401
+    page = response.get_data(as_text=True)
+    message = "Invalid username or password."
+    assert page.count(message) == 1
+    assert 'class="flash' not in page
+
+    card = page.split('<div class="box">', 1)[1].split("</div>", 1)[0]
+    form = card.split("<form ", 1)[1].split("</form>", 1)[0]
+    assert f'role="alert">{message}</p>' in form
+    assert form.index('name="password"') < form.index(message) < form.index('<button type="submit">')
+    assert f'value="{user_data["username"]}"' in form
+    password_input = re.search(r'<input[^>]*name="password"[^>]*>', form).group()
+    assert "value=" not in password_input
+    assert "wrong-password" not in page
+
+    fresh_login = client.get("/login")
+    assert fresh_login.status_code == 200
+    assert message not in fresh_login.get_data(as_text=True)
+    assert b'class="form-error"' not in fresh_login.data
 
 
 def test_login_trims_username(client, user_id, user_data):
