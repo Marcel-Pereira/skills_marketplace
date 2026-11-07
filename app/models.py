@@ -12,6 +12,15 @@ def utcnow():
     return dt.datetime.now(dt.timezone.utc)
 
 
+def calculate_age(date_of_birth, today=None):
+    """Return completed years as of today, or None when no birthday is set."""
+    if date_of_birth is None:
+        return None
+    today = today or dt.date.today()
+    birthday_pending = (today.month, today.day) < (date_of_birth.month, date_of_birth.day)
+    return today.year - date_of_birth.year - birthday_pending
+
+
 # User table, has login info and profile info
 class User(UserMixin, db.Model):
     __tablename__ = "users"  # "user" is a reserved word in PostgreSQL
@@ -23,9 +32,14 @@ class User(UserMixin, db.Model):
     bio = db.Column(db.Text)
     country_code = db.Column(db.String(2), index=True)  # ISO 3166, e.g. 'AR'
     timezone = db.Column(db.String(50), index=True)     # IANA name
+    date_of_birth = db.Column(db.Date)
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
 
     listings = db.relationship("Listing", back_populates="user")
+
+    @property
+    def age(self):
+        return calculate_age(self.date_of_birth)
 
     def set_password(self, password):
         """Hash a plaintext password before storing it."""

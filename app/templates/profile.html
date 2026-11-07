@@ -4,22 +4,77 @@
 {% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
 {% block nav_links %}{{ signed_in_nav() }}{% endblock %}
 {% block content %}
-  <h1>Your profile</h1>
-  <p class="muted">Signed in as {{ user.name }}. Change your skills any time; the dashboard uses them to find your matches.</p>
-
-  <form method="post">
-    <h2>What do you want to learn?</h2>
-    {{ chip_picker("learns", options, user.learns) }}
-
-    <h2>What can you teach?</h2>
-    {{ chip_picker("teaches", options, user.teaches) }}
-
-    {# Both buttons submit the same form; "then" tells the route where to go after saving #}
-    <div class="actions">
-      <button>Save</button>
-      <button name="then" value="filter" class="secondary">Save and filter by these</button>
+    <div class="profile">
+        <h1>Your profile</h1>
+        <p class="muted profile-identity">@{{ user.username }}</p>
+      
+        <nav class="mode-switch profile-tabs" aria-label="Profile sections">
+          <a href="{{ url_for('main.profile', tab='details') }}" class="{{ 'active' if active_tab == 'details' }}" {% if active_tab == 'details' %}aria-current="page"{% endif %}>Personal details</a>
+          <a href="{{ url_for('main.profile', tab='skills') }}" class="{{ 'active' if active_tab == 'skills' }}" {% if active_tab == 'skills' %}aria-current="page"{% endif %}>Skills</a>
+        </nav>
+      
+        {% if active_tab == 'details' %}
+          <p class="muted">Add information about yourself to help others get to know you</p>
+          <form method="post" action="{{ url_for('main.profile', tab='details') }}" class="profile-form">
+            <input type="hidden" name="section" value="details">
+            <section class="card profile-section" aria-labelledby="about-you">
+              <h2 id="about-you">About you</h2>
+              <div class="profile-fields">
+                <div class="profile-field profile-field-wide">
+                  <label for="bio">Bio</label>
+                  <textarea id="bio" name="bio" rows="4" placeholder="Tell people a little about yourself.">{{ values.bio }}</textarea>
+                </div>
+                <div class="profile-field">
+                  <label for="date_of_birth">Date of birth</label>
+                  <input id="date_of_birth" name="date_of_birth" type="date" value="{{ values.date_of_birth }}" max="{{ today }}" autocomplete="bday" {% if errors.date_of_birth %}aria-invalid="true" aria-describedby="date_of_birth-error"{% endif %}>
+                  {% if errors.date_of_birth %}<p class="profile-error" id="date_of_birth-error" role="alert">{{ errors.date_of_birth }}</p>{% endif %}
+                </div>
+              </div>
+            </section>
+      
+            <section class="card profile-section" aria-labelledby="location-and-time">
+              <h2 id="location-and-time">Location and time</h2>
+              <div class="profile-fields">
+                <div class="profile-field">
+                  <label for="country_code">Country</label>
+                  <select id="country_code" name="country_code" autocomplete="country" {% if errors.country_code %}aria-invalid="true" aria-describedby="country_code-error"{% endif %}>
+                    <option value="">Not specified</option>
+                    {% if values.country_code and values.country_code not in country_codes %}<option value="{{ values.country_code }}" selected>{{ values.country_code }}</option>{% endif %}
+                    {% for code, name in country_options %}<option value="{{ code }}" {% if values.country_code == code %}selected{% endif %}>{{ name }}</option>{% endfor %}
+                  </select>
+                  {% if errors.country_code %}<p class="profile-error" id="country_code-error" role="alert">{{ errors.country_code }}</p>{% endif %}
+                </div>
+                <div class="profile-field">
+                  <label for="timezone">Timezone</label>
+                  <select id="timezone" name="timezone" {% if errors.timezone %}aria-invalid="true" aria-describedby="timezone-error"{% endif %}>
+                    <option value="">Not specified</option>
+                    {% if values.timezone and values.timezone not in timezone_names %}<option value="{{ values.timezone }}" selected>{{ values.timezone }}</option>{% endif %}
+                    {% for timezone in timezone_options %}<option value="{{ timezone }}" {% if values.timezone == timezone %}selected{% endif %}>{{ timezone | replace('_', ' ') }}</option>{% endfor %}
+                  </select>
+                  {% if errors.timezone %}<p class="profile-error" id="timezone-error" role="alert">{{ errors.timezone }}</p>{% endif %}
+                </div>
+              </div>
+            </section>
+            <div class="actions profile-actions"><button type="submit">Save profile</button></div>
+          </form>
+        {% else %}
+          <p class="muted">Change your skills any time; the dashboard uses them to find your matches.</p>
+          <form method="post" action="{{ url_for('main.profile', tab='skills') }}" class="profile-skills">
+            <input type="hidden" name="section" value="skills">
+            <section class="card profile-section" aria-labelledby="learn-skills">
+              <h2 id="learn-skills">What do you want to learn?</h2>
+              {{ chip_picker("learns", options, skills.learns) }}
+            </section>
+            <section class="card profile-section" aria-labelledby="teach-skills">
+              <h2 id="teach-skills">What can you teach?</h2>
+              {{ chip_picker("teaches", options, skills.teaches) }}
+            </section>
+            <div class="actions profile-actions">
+              <button type="submit">Save skills</button>
+              <button type="submit" name="then" value="filter" class="secondary">Save and filter by these</button>
+            </div>
+          </form>
+          <script src="{{ url_for('static', filename='chips.js') }}"></script>
+        {% endif %}
     </div>
-  </form>
-
-  <script src="{{ url_for('static', filename='chips.js') }}"></script>
 {% endblock %}

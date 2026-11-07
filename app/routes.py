@@ -1,3 +1,5 @@
+from datetime import date
+
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
 from app.sample_data import SKILL_OPTIONS, CURRENT_USER, PEOPLE, MESSAGES
@@ -6,7 +8,11 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 
 from app import db
-from app.models import User
+from app.models import User, calculate_age
+from app.profile_forms import (
+    COUNTRY_CODES, COUNTRY_OPTIONS, TIMEZONE_NAMES, TIMEZONE_OPTIONS,
+    profile_values, validate_profile_details,
+)
 
 main = Blueprint("main", __name__)
 
@@ -156,17 +162,41 @@ def dashboard():
 @main.route("/profile", methods=["GET", "POST"])
 @login_required
 def profile():
-    """Change what you picked during onboarding. Uses the same chip pickers, pre-selected."""
-    if request.method == "POST":
-        # Kept in memory for now (like chat messages), so changes are lost when the server restarts
-        CURRENT_USER["learns"] = request.form.getlist("learns")
-        CURRENT_USER["teaches"] = request.form.getlist("teaches")
+    """Edit account details independently from the existing demo skill selections."""
+    active_tab = request.args.get("tab", "details")
+    if active_tab not in ("details", "skills"):
+        active_tab = "details"
+    values = profile_values(current_user)
+    errors = {}
 
-        # "Save and filter by these" opens the dashboard already filtered by what I want to learn
-        if request.form.get("then") == "filter":
-            return redirect(url_for("main.dashboard", mode="learner", skill=CURRENT_USER["learns"]))
-        return redirect(url_for("main.dashboard"))
-    return render_template("profile.html", user=CURRENT_USER, options=SKILL_OPTIONS)
+    if request.method == "POST":
+        section = request.form.get("section", "skills")
+        if section == "details":
+            active_tab = "details"
+            values, changes, errors = validate_profile_details(request.form, current_user)
+            if not errors:
+                for field, value in changes.items():
+                    setattr(current_user, field, value)
+                db.session.commit()
+                flash("Profile saved.", "success")
+                return redirect(url_for("main.profile", tab="details"))
+        elif section == "skills":
+            # Skill selections still use the shared demo data.
+            CURRENT_USER["learns"] = request.form.getlist("learns")
+            CURRENT_USER["teaches"] = request.form.getlist("teaches")
+            if request.form.get("then") == "filter":
+                return redirect(url_for("main.dashboard", mode="learner", skill=CURRENT_USER["learns"]))
+            return redirect(url_for("main.dashboard"))
+        else:
+            abort(400)
+
+    return render_template(
+        "profile.html", user=current_user, skills=CURRENT_USER, options=SKILL_OPTIONS,
+        active_tab=active_tab, values=values, errors=errors,
+        country_options=COUNTRY_OPTIONS, country_codes=COUNTRY_CODES,
+        timezone_options=TIMEZONE_OPTIONS, timezone_names=TIMEZONE_NAMES,
+        today=date.today().isoformat(),
+    ), 400 if errors else 200
 
 
 # --- Messages ---
