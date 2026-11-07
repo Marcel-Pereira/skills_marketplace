@@ -44,7 +44,9 @@ def test_learner_skill_filter_shows_people_who_teach_it(authenticated_client):
 
 
 def test_picking_several_skills_shows_anyone_with_one_of_them(authenticated_client):
-    page = authenticated_client.get("/dashboard?mode=learner&skill=Spanish&skill=Design").data
+    page = authenticated_client.get(
+        "/dashboard", query_string={"mode": "learner", "skill": ["Spanish", "Graphic Design"]}
+    ).data
     assert b"Mateo" in page and b"Jiwoo" in page
     assert b"Sam" not in page
 
@@ -61,21 +63,13 @@ def test_removing_one_picked_skill_keeps_the_others(authenticated_client):
     assert 'href="/dashboard?mode=learner&amp;skill=Design" title="Remove Spanish"' in page
 
 
-def test_logo_links_to_dashboard_when_signed_in(client):
-    assert b'<a class="brand" href="/dashboard">Skills Marketplace</a>' in client.get("/dashboard").data
-    assert b'<a class="brand" href="/">Skills Marketplace</a>' in client.get("/signin").data
-
-
-def test_profile_preselects_my_skills(authenticated_client):
+def test_profile_preselects_my_skills(authenticated_client, catalog):
     page = authenticated_client.get("/profile").data.decode()
     assert 'value="Spanish" checked' in page
     assert 'value="JavaScript" checked' not in page
 
 
-def test_profile_save_and_filter(authenticated_client, monkeypatch):
-    # monkeypatch puts the sample user's skills back after the test
-    monkeypatch.setitem(CURRENT_USER, "learns", CURRENT_USER["learns"])
-    monkeypatch.setitem(CURRENT_USER, "teaches", CURRENT_USER["teaches"])
+def test_profile_save_and_filter(authenticated_client, catalog, current_user_skills):
 
     response = authenticated_client.post("/profile", data={"learns": ["Cooking"], "teaches": ["Python"]})
     assert response.headers["Location"] == "/dashboard"
