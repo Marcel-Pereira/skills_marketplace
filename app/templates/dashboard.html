@@ -32,8 +32,11 @@
       </summary>
       <form method="get" class="dropdown" onchange="this.submit()">
         <input type="hidden" name="mode" value="{{ mode }}">
-        {% for s in skills %}
-          <label><input type="checkbox" name="skill" value="{{ s }}" {% if s in picked %}checked{% endif %}> {{ s }}</label>
+        {% for category in categories %}
+          <strong class="category-title">{{ category.name }}</strong>
+          {% for s in category.skills %}
+            <label><input type="checkbox" name="skill" value="{{ s.name }}" {% if s.name in picked %}checked{% endif %}> {{ s.name }}</label>
+          {% endfor %}
         {% endfor %}
       </form>
     </details>
