@@ -1,9 +1,13 @@
 {% extends "base.html" %}
 {% from "_macros.html" import signed_in_nav %}
 {% block title %}Chat with {{ name }}{% endblock %}
+{% block page_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/messaging.css') }}">
+{% endblock %}
 {% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
 {% block nav_links %}{{ signed_in_nav() }}{% endblock %}
 {% block content %}
+<div class="chat-page">
   <p><a href="{{ url_for('main.messages') }}">← All messages</a></p>
   <h1>{{ name }}</h1>
 
@@ -20,4 +24,5 @@
     <input name="text" placeholder="Write a message" required autocomplete="off">
     <button>Send</button>
   </form>
+</div>
 {% endblock %}

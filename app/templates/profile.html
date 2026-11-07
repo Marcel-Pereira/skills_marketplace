@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% from "_macros.html" import chip_picker, signed_in_nav %}
 {% block title %}Profile{% endblock %}
+{% block page_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+{% endblock %}
 {% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
 {% block nav_links %}{{ signed_in_nav() }}{% endblock %}
 {% block content %}
