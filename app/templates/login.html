@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Sign in{% endblock %}
+{% block page_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
 {% block content %}
   <div class="box">
     <h1>Sign in</h1>

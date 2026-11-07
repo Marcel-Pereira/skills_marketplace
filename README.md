@@ -124,10 +124,15 @@ app/__init__.py     create_app(): config, database, blueprints
 app/config.py       secret key and database URL
 app/routes.py       pages
 app/templates/      Jinja pages, all extend base.html
-app/static/         style.css
+app/static/         css/ stylesheets and chips.js
 tests/              pytest tests
 .github/            CI and the PR template
 ```
+
+Shared CSS lives in `app/static/css/base.css` and `components.css`. Page templates
+load their own stylesheet through the `page_styles` block after the shared files.
+Keep page-specific rules in the relevant auth, dashboard, profile, or messaging
+stylesheet; reusable controls belong in `components.css`.
 
 ## How we work
 

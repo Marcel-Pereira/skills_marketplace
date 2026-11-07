@@ -1,9 +1,13 @@
 {% extends "base.html" %}
 {% from "_macros.html" import signed_in_nav %}
 {% block title %}Dashboard{% endblock %}
+{% block page_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
 {% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
 {% block nav_links %}{{ signed_in_nav() }}{% endblock %}
 {% block content %}
+<div class="dashboard">
   {# Mode switch: two links that reload the page with ?mode=learner or ?mode=sharer #}
   <div class="mode-switch">
     <a href="{{ url_for('main.dashboard', mode='learner') }}" class="{{ 'active' if mode == 'learner' }}">Learner</a>
@@ -72,4 +76,5 @@
       if (!filter.contains(event.target)) filter.open = false;
     });
   </script>
+</div>
 {% endblock %}

@@ -1,0 +1,6 @@
+/* Centered cards on the welcome, signup and login pages. */
+.box { max-width: 360px; margin: 48px auto 0; padding: 32px; border: 1px solid #eee; border-radius: 12px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06); text-align: center; }
+.box h1 { margin: 0 0 6px; font-size: 1.8em; }
+.box > .muted { margin: 0 0 28px; }
+.box .stack { max-width: none; text-align: left; }
+.below-box { text-align: center; margin-top: 16px; }

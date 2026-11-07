@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% from "_macros.html" import signed_in_nav %}
 {% block title %}Messages{% endblock %}
+{% block page_styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/messaging.css') }}">
+{% endblock %}
 {% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
 {% block nav_links %}{{ signed_in_nav() }}{% endblock %}
 {% block content %}
