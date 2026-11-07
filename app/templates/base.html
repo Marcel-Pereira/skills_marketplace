@@ -8,7 +8,7 @@
 </head>
 <body>
   <nav>
-    {# The logo goes to the welcome page; signed-in pages override home_url to go to the dashboard #}
+    {# The logo uses the default entry route; signed-in pages link directly to the dashboard #}
     <a class="brand" href="{% block home_url %}{{ url_for('main.index') }}{% endblock %}">Skills Marketplace</a>
     {# Pages add their own links here, e.g. the dashboard adds "Sign out" #}
     {% block nav_links %}{% endblock %}

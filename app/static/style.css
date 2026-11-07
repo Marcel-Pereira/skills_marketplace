@@ -12,7 +12,7 @@ nav .brand { font-weight: bold; color: inherit; text-decoration: none; }
 .box h1 { margin: 0 0 6px; font-size: 1.8em; }
 .box > .muted { margin: 0 0 28px; }  /* the subtitle: close to the title, clear gap before the form or buttons */
 .box .stack { max-width: none; text-align: left; }
-.below-box { text-align: center; margin-top: 16px; }
+.auth-switch { text-align: center; margin: 16px 0 0; }
 
 /* Forms: fields stacked one per line */
 .stack { display: flex; flex-direction: column; gap: 18px; max-width: 360px; }

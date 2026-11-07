@@ -39,7 +39,10 @@ def user_id(app, user_data):
 
 @pytest.fixture
 def authenticated_client(client, user_id, user_data):
-    response = client.post("/login", data=user_data)
+    response = client.post(
+        "/login",
+        data={"username": user_data["username"], "password": user_data["password"]},
+    )
     assert response.status_code == 302
     assert response.headers["Location"] == "/dashboard"
     return client
