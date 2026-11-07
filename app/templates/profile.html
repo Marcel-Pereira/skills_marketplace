@@ -9,10 +9,10 @@
 
   <form method="post">
     <h2>What do you want to learn?</h2>
-    {{ chip_picker("learns", options, user.learns) }}
+    {{ chip_picker("learns", categories, user.learns) }}
 
     <h2>What can you teach?</h2>
-    {{ chip_picker("teaches", options, user.teaches) }}
+    {{ chip_picker("teaches", categories, user.teaches) }}
 
     {# Both buttons submit the same form; "then" tells the route where to go after saving #}
     <div class="actions">
@@ -21,5 +21,4 @@
     </div>
   </form>
 
-  <script src="{{ url_for('static', filename='chips.js') }}"></script>
 {% endblock %}

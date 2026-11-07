@@ -1,12 +1,13 @@
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
-from app.sample_data import SKILL_OPTIONS, CURRENT_USER, PEOPLE, MESSAGES
+from app.sample_data import CURRENT_USER, PEOPLE, MESSAGES
 from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
 
 from app import db
-from app.models import User
+from app.models import Category, Skill, User
 
 main = Blueprint("main", __name__)
 
@@ -95,6 +96,24 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for("main.login"))
 
+# --- Helper Functions ---
+# Used in order to get skills and categories from the database to display in the onboarding and profile pages.
+
+
+def get_categories():
+    """The fixed catalog, for the pickers: every category with its skills."""
+    return (Category.query.options(selectinload(Category.skills))
+            .order_by(Category.name).all())
+
+
+def only_catalog_skills(names):
+    """Keep only names that exist in the catalog, so a hand-made POST can't add skills."""
+    if not names:
+        return []
+    rows = db.session.query(Skill.name).filter(Skill.name.in_(names)).all()
+    known = {name for (name,) in rows}
+    return [name for name in names if name in known]
+
 # --- Onboarding ---
 # Both steps share onboarding.html; only the question, the field name and the next page change.
 
@@ -104,7 +123,7 @@ def onboarding_learn():
     if request.method == "POST":
         return redirect(url_for("main.onboarding_teach"))
     return render_template("onboarding.html", step=1, question="What do you want to learn?",
-                           field="learns", options=SKILL_OPTIONS)
+                           field="learns", categories=get_categories())
 
 
 @main.route("/onboarding/teach", methods=["GET", "POST"])
@@ -113,7 +132,7 @@ def onboarding_teach():
     if request.method == "POST":
         return redirect(url_for("main.dashboard"))
     return render_template("onboarding.html", step=2, question="What can you teach?",
-                           field="teaches", options=SKILL_OPTIONS)
+                           field="teaches", categories=get_categories())
 
 
 # --- Dashboard ---
@@ -148,7 +167,7 @@ def dashboard():
     matches.sort(key=lambda match: len(match["shared"]), reverse=True)
 
     return render_template("dashboard.html", mode=mode, picked=picked,
-                           skills=SKILL_OPTIONS, matches=matches)
+                           categories=get_categories(), matches=matches)
 
 
 # --- Profile ---
@@ -159,14 +178,14 @@ def profile():
     """Change what you picked during onboarding. Uses the same chip pickers, pre-selected."""
     if request.method == "POST":
         # Kept in memory for now (like chat messages), so changes are lost when the server restarts
-        CURRENT_USER["learns"] = request.form.getlist("learns")
-        CURRENT_USER["teaches"] = request.form.getlist("teaches")
+        CURRENT_USER["learns"] = only_catalog_skills(request.form.getlist("learns"))
+        CURRENT_USER["teaches"] = only_catalog_skills(request.form.getlist("teaches"))
 
         # "Save and filter by these" opens the dashboard already filtered by what I want to learn
         if request.form.get("then") == "filter":
             return redirect(url_for("main.dashboard", mode="learner", skill=CURRENT_USER["learns"]))
         return redirect(url_for("main.dashboard"))
-    return render_template("profile.html", user=CURRENT_USER, options=SKILL_OPTIONS)
+    return render_template("profile.html", user=CURRENT_USER, categories=get_categories())
 
 
 # --- Messages ---
