@@ -18,7 +18,9 @@ main = Blueprint("main", __name__)
 
 @main.route("/")
 def index():
-    return render_template("index.html")
+    if current_user.is_authenticated:
+        return redirect(url_for("main.dashboard"))
+    return redirect(url_for("main.login"))
 
 
 # --- Accounts ---
@@ -32,9 +34,6 @@ def signup():
         email = request.form.get("email", "").strip().lower()
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        bio = request.form.get("bio", "").strip() or None
-        country_code = request.form.get("country_code", "").strip().upper() or None
-        timezone = request.form.get("timezone", "").strip() or None
 
         if not email or not username or not password:
             flash("Email, username, and password are required.", "error")
@@ -47,13 +46,7 @@ def signup():
             flash("That email or username is already registered.", "error")
             return render_template("signup.html"), 409
 
-        user = User(
-            email=email,
-            username=username,
-            bio=bio,
-            country_code=country_code,
-            timezone=timezone,
-        )
+        user = User(email=email, username=username)
         user.set_password(password)
         db.session.add(user)
 
@@ -75,13 +68,14 @@ def login():
         return redirect(url_for("main.dashboard"))
 
     if request.method == "POST":
-        email = request.form.get("email", "").strip().lower()
+        username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        user = User.query.filter_by(email=email).first()
+        user = User.query.filter_by(username=username).first()
 
         if user is None or not user.check_password(password):
-            flash("Invalid email or password.", "error")
-            return render_template("login.html"), 401
+            return render_template(
+                "login.html", login_error="Invalid username or password."
+            ), 401
 
         login_user(user)
         return redirect(url_for("main.dashboard"))
