@@ -10,6 +10,7 @@ Use Python 3.12. On macOS/Linux:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+python -m flask --app app seed
 python run.py
 ```
 
@@ -18,10 +19,20 @@ On Windows (PowerShell), you can run the virtual environment's Python directly:
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m flask --app app seed
 .\.venv\Scripts\python.exe run.py
 ```
 
 Then open http://127.0.0.1:5001.
+
+The seed command loads the shared skill catalog and is safe to repeat. Onboarding,
+profile editing, and dashboard filters all use this catalog. Saved choices belong
+to the signed-in account. Removing a choice deactivates its listing; selecting it
+again restores its existing details.
+
+These setup steps assume a new database or one with the category schema from #25.
+An existing database from before that change still needs an upgrade path before
+seeding. Do not delete existing accounts or listings to apply this integration.
 
 ### Command shortcuts
 
@@ -36,6 +47,7 @@ The Makefile selects `.venv/bin/python` on macOS/Linux and
 
 ```bash
 make setup  # create the virtual environment and install dependencies
+make seed   # load the approved categories and skills
 make dev    # start the app on port 5001 with hot reload
 make test   # run tests
 ```

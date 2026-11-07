@@ -45,13 +45,12 @@
       <select id="skill-filter" name="skill">
         <option value="">Choose a skill</option>
 
-        {% for skill in skills %}
-          <option
-            value="{{ skill }}"
-            {% if skill in picked %}selected{% endif %}
-          >
-            {{ skill }}
-          </option>
+        {% for category in categories %}
+          <optgroup label="{{ category.name }}">
+            {% for skill in category.skills %}
+              <option value="{{ skill.id }}" {% if skill.id in picked %}selected{% endif %}>{{ skill.name }}</option>
+            {% endfor %}
+          </optgroup>
         {% endfor %}
       </select>
 
@@ -72,13 +71,13 @@
       {% if mode == "learner" %}
         <p>Can teach:
           {% for skill in match.shared %}
-            <span class="chip {{ 'match' if skill in match.profile_shared }}">{{ skill }}</span>
+            <span class="chip {{ 'match' if skill.id in match.profile_shared }}">{{ skill.name }}</span>
           {% endfor %}
         </p>
       {% else %}
         <p>Wants to learn:
           {% for skill in match.shared %}
-            <span class="chip {{ 'match' if skill in match.profile_shared }}">{{ skill }}</span>
+            <span class="chip {{ 'match' if skill.id in match.profile_shared }}">{{ skill.name }}</span>
           {% endfor %}
         </p>
       {% endif %}
