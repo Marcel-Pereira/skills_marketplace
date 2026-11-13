@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from app import db
-from app.models import HISTORICAL_CATEGORY, Category, Listing, Skill, User
+from app.models import Category, Listing, Skill, User
 from app.sample_data import MESSAGES
 
 main = Blueprint("main", __name__)
@@ -13,8 +13,7 @@ main = Blueprint("main", __name__)
 
 def get_categories():
     """Load the shared catalog and its alphabetically sorted skills."""
-    return (Category.query.filter(Category.name != HISTORICAL_CATEGORY)
-            .options(selectinload(Category.skills))
+    return (Category.query.options(selectinload(Category.skills))
             .order_by(Category.name).all())
 
 
@@ -23,7 +22,7 @@ def catalog_skill_ids(values):
 
     New forms use IDs. Unique names from older forms and links still work.
     """
-    skills = Skill.query.join(Skill.category).filter(Category.name != HISTORICAL_CATEGORY).all()
+    skills = Skill.query.all()
     by_id = {str(skill.id): skill.id for skill in skills}
     by_name = {}
     for skill in skills:
@@ -43,23 +42,17 @@ def catalog_skill_ids(values):
     return selected
 
 
-def catalog_listings():
-    """Only selectable listings participate in edits and matching."""
-    return (Listing.query.join(Listing.skill).join(Skill.category)
-            .filter(Category.name != HISTORICAL_CATEGORY))
-
-
 def get_user_skill_ids(user, listing_type):
     """Return this account's active learning or teaching selections."""
-    return {listing.skill_id for listing in catalog_listings().filter(
-        Listing.user_id == user.id, Listing.type == listing_type, Listing.is_active.is_(True)
+    return {listing.skill_id for listing in Listing.query.filter_by(
+        user_id=user.id, type=listing_type, is_active=True
     ).all()}
 
 
 def save_user_skills(user, listing_type, skill_ids, commit=True):
     """Apply validated catalog IDs while keeping existing listing details."""
-    existing = {listing.skill_id: listing for listing in catalog_listings().filter(
-        Listing.user_id == user.id, Listing.type == listing_type
+    existing = {listing.skill_id: listing for listing in Listing.query.filter_by(
+        user_id=user.id, type=listing_type
     ).all()}
 
     # Deactivate removed choices so reselecting them restores their details.
@@ -231,7 +224,7 @@ def dashboard():
     else:
         wanted = None
 
-    listings = catalog_listings().filter(
+    listings = Listing.query.filter(
         Listing.type == their_type, Listing.is_active.is_(True),
         Listing.user_id != current_user.id
     ).options(selectinload(Listing.skill), selectinload(Listing.user))
@@ -286,13 +279,8 @@ def profile():
         "learns": get_user_skill_ids(current_user, "learn"),
         "teaches": get_user_skill_ids(current_user, "teach"),
     }
-    previous_skills = (db.session.query(Listing.type, Skill.name)
-                       .select_from(Listing).join(Listing.skill).join(Skill.category)
-                       .filter(Listing.user_id == current_user.id, Listing.is_active.is_(True),
-                               Category.name == HISTORICAL_CATEGORY)
-                       .order_by(Listing.type, Skill.name).all())
     return render_template(
-        "profile.html", user=profile_data, categories=get_categories(), previous_skills=previous_skills
+        "profile.html", user=profile_data, categories=get_categories()
     ), status
 
 

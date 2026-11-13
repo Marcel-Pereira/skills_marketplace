@@ -4,10 +4,7 @@ Run with `flask --app app seed`. Safe to run many times: it only adds what is mi
 To add a skill or category, edit CATALOG below and run the command again.
 Skill names must be unique within a category (the same name may appear in two categories).
 """
-from sqlalchemy import select
-
 from app import db
-from app.catalog_migration import catalog_transaction, upgrade_legacy_skills
 from app.models import Category, Skill
 
 CATALOG = {
@@ -149,25 +146,16 @@ CATALOG = {
 
 
 def seed_skills():
-    """Upgrade the old catalog and insert missing choices in one transaction."""
-    with catalog_transaction(db.engine) as (connection, needs_upgrade):
-        categories = Category.__table__
-        skills = Skill.__table__
-        category_rows = connection.execute(select(categories.c.name, categories.c.id))
-        ids_by_name = {name: category_id for name, category_id in category_rows}
-        for name in CATALOG:
-            if name not in ids_by_name:
-                result = connection.execute(categories.insert().values(name=name))
-                ids_by_name[name] = result.inserted_primary_key[0]
+    """Insert any missing categories and skills."""
+    for category_name, skill_names in CATALOG.items():
+        category = Category.query.filter_by(name=category_name).first()
+        if category is None:
+            category = Category(name=category_name)
+            db.session.add(category)
+            db.session.flush()  # assigns category.id without committing yet
 
-        if needs_upgrade:
-            upgrade_legacy_skills(connection, CATALOG, ids_by_name)
+        for skill_name in skill_names:
+            if not Skill.query.filter_by(name=skill_name, category_id=category.id).first():
+                db.session.add(Skill(name=skill_name, category_id=category.id))
 
-        existing = set(connection.execute(select(skills.c.category_id, skills.c.name)))
-        missing = [
-            {"category_id": ids_by_name[category], "name": name}
-            for category, names in CATALOG.items() for name in names
-            if (ids_by_name[category], name) not in existing
-        ]
-        if missing:
-            connection.execute(skills.insert(), missing)
+    db.session.commit()

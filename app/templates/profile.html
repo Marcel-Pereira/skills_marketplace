@@ -21,13 +21,4 @@
     </div>
   </form>
 
-  {% if previous_skills %}
-    <h2>Previously saved skills</h2>
-    <ul>
-      {% for direction, name in previous_skills %}
-        <li>{{ "Learning" if direction == "learn" else "Teaching" }} {{ name }}</li>
-      {% endfor %}
-    </ul>
-  {% endif %}
-
 {% endblock %}

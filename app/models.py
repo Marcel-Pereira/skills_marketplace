@@ -7,9 +7,6 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from app import db, login_manager
 
 
-HISTORICAL_CATEGORY = "Previously saved skills"
-
-
 # Simple function to get the current UTC time. Used as a default value for created_at columns.
 def utcnow():
     return dt.datetime.now(dt.timezone.utc)

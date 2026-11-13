@@ -30,13 +30,9 @@ profile editing, and dashboard filters all use this catalog. Saved choices belon
 to the signed-in account. Removing a choice deactivates its listing; selecting it
 again restores its existing details.
 
-If you already have a SQLite database from before skill categories were added,
-stop the app, run the same seed command against that database, then restart it.
-It assigns categories to existing skills and keeps accounts, listing details,
-and saved choices. Skills outside the catalog remain on their owners' profiles
-under “Previously saved skills.” If both an old label and its new spelling
-already exist, the old label stays there too. The upgrade and catalog update
-run in one transaction and can be retried after a failure.
+For an older development database created before categories, stop the app and
+move the SQLite file (by default `instance/skills.db`) to a backup location.
+Run the seed command to create a fresh test database, then restart the app.
 
 ### Command shortcuts
 

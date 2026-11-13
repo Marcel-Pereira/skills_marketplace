@@ -33,13 +33,6 @@ def create_app(test_config=None):
         print("Seeded categories and skills.")
 
     with app.app_context():
-        if db.engine.dialect.name == "sqlite":
-            # Two seed commands can both start before the categories table exists.
-            # Serialize the table check and creation as well as the later upgrade.
-            with db.engine.begin() as connection:
-                connection.exec_driver_sql("BEGIN IMMEDIATE")
-                db.metadata.create_all(connection)
-        else:
-            db.create_all()
+        db.create_all()
 
     return app
