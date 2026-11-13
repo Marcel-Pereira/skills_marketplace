@@ -1,0 +1,41 @@
+#dashboard-filters .filter-row {
+  position: relative;
+}
+
+#dashboard-filters .filter {
+  position: static;
+}
+
+#dashboard-filters .dropdown {
+  box-sizing: border-box;
+  width: min(100%, 23rem);
+  min-width: 0;
+  max-height: none;
+}
+
+#dashboard-filters .actions input {
+  flex: 1;
+  min-width: 0;
+}
+
+#dashboard-filters .catalog-options {
+  max-height: min(14rem, 35vh);
+  overflow-y: auto;
+  margin: 0.5rem 0;
+}
+
+#dashboard-filters fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+#dashboard-filters .chips {
+  align-items: center;
+}
+
+@media (max-width: 40rem) {
+  #dashboard-filters .dropdown {
+    left: 0;
+  }
+}

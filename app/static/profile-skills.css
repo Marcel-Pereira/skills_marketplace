@@ -1,0 +1,16 @@
+.profile-modes { border: 0; margin: 0; padding: 0; }
+.profile-modes legend { margin-bottom: .4rem; }
+.profile-modes label { display: inline-block; cursor: pointer; border: 1px solid #bbb; border-radius: 6px; margin-right: .4rem; padding: .4rem .8rem; }
+.profile-modes label:has(input:checked) { border-color: #222; background: #eee; }
+.profile-modes input { margin: 0 .25rem 0 0; accent-color: #222; }
+.profile-skills:has(#profile-learn:checked) #panel-teaches,
+.profile-skills:has(#profile-teach:checked) #panel-learns { display: none; }
+.profile-editor h2 { margin-bottom: .6rem; }
+.profile-search { margin-bottom: .75rem; }
+.profile-search label { display: block; margin-bottom: .2rem; }
+.profile-search input { box-sizing: border-box; width: 100%; max-width: 30rem; }
+.profile-editor .chip-picker { max-height: clamp(12rem, 45vh, 25rem); overflow-y: auto; border: 1px solid #ddd; border-radius: 6px; padding: 0 .75rem; }
+.profile-editor .chip input { display: inline; margin: 0 .3rem 0 0; accent-color: #222; }
+.profile-editor .chip:focus-within { outline: 2px solid currentColor; outline-offset: 2px; }
+.profile-editor [hidden] { display: none; }
+.profile-skills .actions { margin-top: 1rem; flex-wrap: wrap; }
