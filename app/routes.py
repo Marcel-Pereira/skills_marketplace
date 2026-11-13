@@ -23,32 +23,34 @@ def get_user_skills(user, listing_type):
 
 
 def save_user_skills(user, listing_type, skill_names, commit=True):
-    """Save a user's skills using the existing Skill and Listing tables."""
+    """Update selected skills without replacing unchanged listings."""
 
-    # Remove duplicate or empty skill names.
     names = list(dict.fromkeys(
         name.strip()
         for name in skill_names
-        if name.strip()
+        if name and name.strip() and len(name.strip()) <= 100
     ))
 
-    # The Skill model allows names up to 100 characters.
-    names = [name for name in names if len(name) <= 100]
-
-    # Remove the user's previous listings of this type.
-    # Their other type (learn or teach) is not affected.
     existing = Listing.query.filter_by(
         user_id=user.id,
         type=listing_type
     ).all()
 
-    for listing in existing:
-        db.session.delete(listing)
+    # Keep existing listings for skills that remain selected.
+    existing_by_name = {
+        listing.skill.name: listing for listing in existing
+    }
 
-    db.session.flush()
+    # Delete only skills the user actually removed.
+    for name, listing in existing_by_name.items():
+        if name not in names:
+            db.session.delete(listing)
 
+    # Add only newly selected skills.
     for name in names:
-        # Reuse a skill if it already exists.
+        if name in existing_by_name:
+            continue
+
         skill = Skill.query.filter_by(name=name).first()
 
         if skill is None:
@@ -56,19 +58,16 @@ def save_user_skills(user, listing_type, skill_names, commit=True):
             db.session.add(skill)
             db.session.flush()
 
-        # Connect this user to this skill as a learner or teacher.
-        db.session.add(
-            Listing(
-                user_id=user.id,
-                skill_id=skill.id,
-                type=listing_type,
-                is_active=True
-            )
-        )
+        db.session.add(Listing(
+            user_id=user.id,
+            skill_id=skill.id,
+            type=listing_type,
+            is_active=True
+        ))
 
-    # Allow the profile to save both categories in one transaction.
     if commit:
         db.session.commit()
+
 
 # Main user flow: sign up -> onboarding -> dashboard -> connect -> chat.
 # Onboarding and profile skills are saved using the existing database models.
@@ -237,9 +236,15 @@ def dashboard():
     if filter_mode == "skill" or (filter_mode == "default" and picked):
         # By Skill: show people offering/requesting the selected skill.
         # Keep compatibility with the MVP's existing ?skill=... links.
-        selected_skill = picked[0] if picked else ""
-        wanted = [selected_skill] if selected_skill else []
-        picked = [selected_skill] if selected_skill else []
+        # Match any selected skill, not just the first one.
+        picked = list(dict.fromkeys(skill for skill in picked if skill in SKILL_OPTIONS))
+
+        # Clicking a chip removes only that skill.
+        removed = request.args.get("remove_skill")
+        if removed in picked:
+            picked.remove(removed)
+
+        wanted = picked
 
     elif filter_mode == "profile":
         # My Profile: use skills saved in the signed-in user's profile.

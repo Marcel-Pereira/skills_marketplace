@@ -18,13 +18,14 @@
 
   {# Filter options for the current Learner or Sharer page. #}
   <div class="filter-row">
+    <span class="muted">Filter:</span>
 
-    {# Default: show all eligible matches in the selected mode. #}
+    {# Everyone: show all eligible matches in the selected mode. #}
     <a
       class="{{ 'button' if filter_mode == 'default' else 'button secondary' }}"
       href="{{ url_for('main.dashboard', mode=mode, filter='default') }}"
     >
-      Default
+      Everyone
     </a>
 
     {# My Profile: use all learning or teaching skills saved in the profile. #}
@@ -35,27 +36,38 @@
       My Profile
     </a>
 
-    {# By Skill: choose exactly one skill. #}
+    {# By Skill: allow several skills to be selected together. #}
     <form method="get">
       <input type="hidden" name="mode" value="{{ mode }}">
       <input type="hidden" name="filter" value="skill">
 
-      <label for="skill-filter">By Skill:</label>
+      <details class="filter" {% if picked %}open{% endif %}>
+        <summary>By Skill{% if picked %} ({{ picked|length }}){% endif %}</summary>
 
-      <select id="skill-filter" name="skill">
-        <option value="">Choose a skill</option>
+        <div class="dropdown">
+          {% for skill in skills %}
+            <label>
+              <input type="checkbox" name="skill" value="{{ skill }}"
+                     {% if skill in picked %}checked{% endif %}>
+              {{ skill }}
+            </label>
+          {% endfor %}
+          <button type="submit">Apply</button>
+        </div>
+      </details>
 
-        {% for skill in skills %}
-          <option
-            value="{{ skill }}"
-            {% if skill in picked %}selected{% endif %}
-          >
-            {{ skill }}
-          </option>
-        {% endfor %}
-      </select>
+      {% for skill in picked %}
+        <button type="submit" name="remove_skill" value="{{ skill }}"
+                aria-label="Remove {{ skill }}">
+          {{ skill }} ×
+        </button>
+      {% endfor %}
 
-      <button type="submit">Apply</button>
+      {% if picked %}
+        <a href="{{ url_for('main.dashboard', mode=mode, filter='default') }}">
+          Clear all
+        </a>
+      {% endif %}
     </form>
 
   </div>

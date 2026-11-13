@@ -153,8 +153,8 @@ def test_sharer_skill_filter_shows_people_who_want_to_learn_it(
     assert b"Linh" in spanish_page
     assert b"Mateo" not in spanish_page
 
-def test_single_skill_filter_selects_one_skill(authenticated_client):
-    """The By Skill filter should select one skill at a time."""
+def test_skill_filter_shows_selected_skills(authenticated_client):
+    """The By Skill filter should keep selected skills checked."""
 
     # Open the dashboard with Spanish selected.
     response = authenticated_client.get(
@@ -167,13 +167,13 @@ def test_single_skill_filter_selects_one_skill(authenticated_client):
 
     # The selected skill should appear in the dropdown.
     assert 'value="Spanish"' in page
-    assert "selected" in page
+    assert "checked" in page
 
     # The filter form should use the single-skill filtering mode.
     assert 'name="filter" value="skill"' in page
 
-    # The user should be able to switch back to Default or My Profile.
-    assert "Default" in page
+    # The user should be able to switch back to Everyone or My Profile.
+    assert "Everyone" in page
     assert "My Profile" in page
 
 
@@ -611,3 +611,66 @@ def test_default_and_profile_have_distinct_results(
     assert b"Jiwoo" in profile_page
     assert b"Wei" not in profile_page
     assert b"Sam" not in profile_page
+
+
+def test_multiple_skill_filters(authenticated_client, matching_data):
+    """Show people matching at least one selected skill."""
+    page = authenticated_client.get(
+        "/dashboard?mode=learner&filter=skill&skill=Spanish&skill=Design"
+    ).data
+
+    assert b"Mateo" in page
+    assert b"Jiwoo" in page
+    assert b"Sam" not in page
+
+
+def test_removing_one_skill_keeps_other_filters(
+    authenticated_client, matching_data
+):
+    """Removing Spanish should keep Design selected."""
+    page = authenticated_client.get(
+        "/dashboard?mode=learner&filter=skill"
+        "&skill=Spanish&skill=Design&remove_skill=Spanish"
+    ).data
+
+    assert b"Jiwoo" in page
+    assert b"Mateo" not in page
+    assert b'value="Design"' in page
+    assert b"checked" in page
+
+
+def test_profile_save_preserves_listing_details(
+    authenticated_client, app, user_id
+):
+    """Saving unchanged skills must preserve listing details and IDs."""
+    from app import db
+    from app.models import Listing
+
+    authenticated_client.post(
+        "/profile",
+        data={"learns": ["Spanish"], "teaches": ["Python"]}
+    )
+
+    with app.app_context():
+        listing = Listing.query.filter_by(
+            user_id=user_id, type="learn"
+        ).first()
+
+        original_id = listing.id
+        listing.level = "advanced"
+        listing.description = "I want to practice conversation."
+        db.session.commit()
+
+    authenticated_client.post(
+        "/profile",
+        data={"learns": ["Spanish"], "teaches": ["Python"]}
+    )
+
+    with app.app_context():
+        listing = Listing.query.filter_by(
+            user_id=user_id, type="learn"
+        ).first()
+
+        assert listing.id == original_id
+        assert listing.level == "advanced"
+        assert listing.description == "I want to practice conversation."
