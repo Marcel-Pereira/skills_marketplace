@@ -16,36 +16,62 @@
     <h1>Find someone to learn from</h1>
   {% endif %}
 
-  {# Skill filter: a toggle that opens a dropdown. <details> opens and closes on its own with no JavaScript.
-     Inside is a checkbox list of all skills. onchange submits the form as soon as a box is ticked,
-     so the filter applies right away. The page reloads, so the dropdown stays open while skills are picked.
-     It's a GET form, so the picked skills end up in the URL (?skill=Spanish&skill=Design). #}
+  {# Filter options for the current Learner or Sharer page. #}
   <div class="filter-row">
-    <details class="filter" {% if picked %}open{% endif %}>
-      <summary>
-        {# Filter icon: three lines getting shorter, drawn inline so no icon library is needed #}
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <path d="M4 6h16M7 12h10M10 18h4"/>
-        </svg>
-        Filter: {{ "skills you want to learn" if mode == "learner" else "skills you can teach" }}
-        {% if picked %}<span class="count">{{ picked | length }}</span>{% endif %}
-      </summary>
-      <form method="get" class="dropdown" onchange="this.submit()">
-        <input type="hidden" name="mode" value="{{ mode }}">
-        {% for s in skills %}
-          <label><input type="checkbox" name="skill" value="{{ s }}" {% if s in picked %}checked{% endif %}> {{ s }}</label>
-        {% endfor %}
-      </form>
-    </details>
+    <span class="muted">Filter:</span>
 
-    {# Picked skills sit next to the toggle. Each × links to the same page without that one skill. #}
-    {% for s in picked %}
-      <span class="chip">{{ s }}
-        <a href="{{ url_for('main.dashboard', mode=mode, skill=picked | reject('equalto', s) | list) }}" title="Remove {{ s }}">×</a>
-      </span>
-    {% endfor %}
-    {% if picked %}<a href="{{ url_for('main.dashboard', mode=mode) }}">Clear all</a>{% endif %}
+    {# Everyone: show all eligible matches in the selected mode. #}
+    <a
+      class="{{ 'button' if filter_mode == 'default' else 'button secondary' }}"
+      href="{{ url_for('main.dashboard', mode=mode, filter='default') }}"
+    >
+      Everyone
+    </a>
+
+    {# My Profile: use all learning or teaching skills saved in the profile. #}
+    <a
+      class="{{ 'button' if filter_mode == 'profile' else 'button secondary' }}"
+      href="{{ url_for('main.dashboard', mode=mode, filter='profile') }}"
+    >
+      My Profile
+    </a>
+
+    {# By Skill: allow several skills to be selected together. #}
+    <form method="get">
+      <input type="hidden" name="mode" value="{{ mode }}">
+      <input type="hidden" name="filter" value="skill">
+
+      <details class="filter" {% if picked %}open{% endif %}>
+        <summary>By Skill{% if picked %} ({{ picked|length }}){% endif %}</summary>
+
+        <div class="dropdown">
+          {% for skill in skills %}
+            <label>
+              <input type="checkbox" name="skill" value="{{ skill }}"
+                     {% if skill in picked %}checked{% endif %}>
+              {{ skill }}
+            </label>
+          {% endfor %}
+          <button type="submit">Apply</button>
+        </div>
+      </details>
+
+      {% for skill in picked %}
+        <button type="submit" name="remove_skill" value="{{ skill }}"
+                aria-label="Remove {{ skill }}">
+          {{ skill }} ×
+        </button>
+      {% endfor %}
+
+      {% if picked %}
+        <a href="{{ url_for('main.dashboard', mode=mode, filter='default') }}">
+          Clear all
+        </a>
+      {% endif %}
+    </form>
+
   </div>
+
 
   {# Each match is a person plus the skills they share with me; shared skills are highlighted #}
   {% for match in matches %}
@@ -54,22 +80,23 @@
         <h3>{{ match.person.name }}</h3>
         <a class="button" href="{{ url_for('main.chat', name=match.person.name) }}">Connect</a>
       </div>
-      <p>Can teach:
-        {% for s in match.person.teaches %}<span class="chip {{ 'match' if s in match.shared }}">{{ s }}</span>{% endfor %}
-      </p>
-      <p>Wants to learn:
-        {% for s in match.person.learns %}<span class="chip {{ 'match' if s in match.shared }}">{{ s }}</span>{% endfor %}
-      </p>
+      {# Display only skills relevant to the selected matching direction. #}
+      {% if mode == "learner" %}
+        <p>Can teach:
+          {% for skill in match.shared %}
+            <span class="chip {{ 'match' if skill in match.profile_shared }}">{{ skill }}</span>
+          {% endfor %}
+        </p>
+      {% else %}
+        <p>Wants to learn:
+          {% for skill in match.shared %}
+            <span class="chip {{ 'match' if skill in match.profile_shared }}">{{ skill }}</span>
+          {% endfor %}
+        </p>
+      {% endif %}
     </div>
   {% else %}
     <p class="muted">No one matches these skills yet. Try others, or add more skills on your <a href="{{ url_for('main.profile') }}">profile</a>.</p>
   {% endfor %}
 
-  <script>
-    // Close the filter dropdown when the user clicks anywhere outside it
-    const filter = document.querySelector(".filter");
-    document.addEventListener("click", function (event) {
-      if (!filter.contains(event.target)) filter.open = false;
-    });
-  </script>
 {% endblock %}

@@ -6,14 +6,72 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 
 from app import db
-from app.models import User
+from app.models import User, Skill, Listing
 
 main = Blueprint("main", __name__)
 
-# The user flow is: sign up -> onboarding (learn, then teach) -> dashboard -> connect -> chat.
-# Profile and Messages are reachable from the nav once signed in.
-# Forms don't save anything yet. Each POST just moves to the next screen;
-# saving users and their skills gets added here once the database models exist.
+def get_user_skills(user, listing_type):
+    """Get the skills this user wants to learn or can teach."""
+
+    listings = Listing.query.filter_by(
+        user_id=user.id,
+        type=listing_type,
+        is_active=True
+    ).all()
+
+    return sorted(listing.skill.name for listing in listings)
+
+
+def save_user_skills(user, listing_type, skill_names, commit=True):
+    """Update selected skills without replacing unchanged listings."""
+
+    names = list(dict.fromkeys(
+        name.strip()
+        for name in skill_names
+        if name and name.strip() and len(name.strip()) <= 100
+    ))
+
+    existing = Listing.query.filter_by(
+        user_id=user.id,
+        type=listing_type
+    ).all()
+
+    # Keep existing listings for skills that remain selected.
+    existing_by_name = {
+        listing.skill.name: listing for listing in existing
+    }
+
+    # Delete only skills the user actually removed.
+    for name, listing in existing_by_name.items():
+        if name not in names:
+            db.session.delete(listing)
+
+    # Add only newly selected skills.
+    for name in names:
+        if name in existing_by_name:
+            continue
+
+        skill = Skill.query.filter_by(name=name).first()
+
+        if skill is None:
+            skill = Skill(name=name)
+            db.session.add(skill)
+            db.session.flush()
+
+        db.session.add(Listing(
+            user_id=user.id,
+            skill_id=skill.id,
+            type=listing_type,
+            is_active=True
+        ))
+
+    if commit:
+        db.session.commit()
+
+
+# Main user flow: sign up -> onboarding -> dashboard -> connect -> chat.
+# Onboarding and profile skills are saved using the existing database models.
+# The dashboard uses those saved skills to find matching users.
 
 
 @main.route("/")
@@ -101,19 +159,49 @@ def logout():
 @main.route("/onboarding/learn", methods=["GET", "POST"])
 @login_required
 def onboarding_learn():
+    """Save the skills the current user wants to learn."""
+
     if request.method == "POST":
+        # Save these skills for the signed-in user.
+        save_user_skills(
+            current_user,
+            "learn",
+            request.form.getlist("learns")
+        )
+
         return redirect(url_for("main.onboarding_teach"))
-    return render_template("onboarding.html", step=1, question="What do you want to learn?",
-                           field="learns", options=SKILL_OPTIONS)
+
+    return render_template(
+        "onboarding.html",
+        step=1,
+        question="What do you want to learn?",
+        field="learns",
+        options=SKILL_OPTIONS
+    )
 
 
 @main.route("/onboarding/teach", methods=["GET", "POST"])
 @login_required
 def onboarding_teach():
+    """Save the skills the current user can teach."""
+
     if request.method == "POST":
+        # Save teaching skills separately from learning skills.
+        save_user_skills(
+            current_user,
+            "teach",
+            request.form.getlist("teaches")
+        )
+
         return redirect(url_for("main.dashboard"))
-    return render_template("onboarding.html", step=2, question="What can you teach?",
-                           field="teaches", options=SKILL_OPTIONS)
+
+    return render_template(
+        "onboarding.html",
+        step=2,
+        question="What can you teach?",
+        field="teaches",
+        options=SKILL_OPTIONS
+    )
 
 
 # --- Dashboard ---
@@ -121,52 +209,163 @@ def onboarding_teach():
 @main.route("/dashboard")
 @login_required
 def dashboard():
-    """Find people to pair with. The page has two modes, switched with ?mode= in the URL:
-    - learner: looking for people who can teach me
-    - sharer: looking for people who want to learn from me
-    With no skills picked it shows everyone, best matches for my own skills first.
-    With skills picked (?skill=Spanish&skill=Guitar) it only shows people who teach (learner)
-    or want to learn (sharer) at least one of them."""
+    """Find people whose skills match the signed-in user's interests."""
+
     mode = request.args.get("mode", "learner")
-    picked = request.args.getlist("skill")  # getlist because several skills can be picked
+    if mode not in ("learner", "sharer"):
+        mode = "learner"
 
-    # In learner mode my "learns" list is matched against their "teaches" list, and the other way round
+    # Learners look for teachers. Sharers look for learners.
     if mode == "sharer":
-        my_skills, their_list = CURRENT_USER["teaches"], "learns"
+        my_skills = get_user_skills(current_user, "teach")
+        their_type = "learn"
     else:
-        my_skills, their_list = CURRENT_USER["learns"], "teaches"
-    wanted = picked if picked else my_skills
+        my_skills = get_user_skills(current_user, "learn")
+        their_type = "teach"
 
-    matches = []
-    for person in PEOPLE:
-        shared = [s for s in person[their_list] if s in wanted]
-        if picked and not shared:
-            continue  # skills were picked and this person has none of them
-        matches.append({"person": person, "shared": shared})
+    # Choose how to filter people on the Learner or Sharer dashboard.
+    filter_mode = request.args.get("filter", "default")
 
-    # Best pairs first: people who share more skills with me
-    matches.sort(key=lambda match: len(match["shared"]), reverse=True)
+    if filter_mode not in ("default", "skill", "profile"):
+        filter_mode = "default"
 
-    return render_template("dashboard.html", mode=mode, picked=picked,
-                           skills=SKILL_OPTIONS, matches=matches)
+    # Keep supporting the MVP's existing ?skill=... links.
+    picked = request.args.getlist("skill")
 
+
+    if filter_mode == "skill" or (filter_mode == "default" and picked):
+        # By Skill: show people offering/requesting the selected skill.
+        # Keep compatibility with the MVP's existing ?skill=... links.
+        # Match any selected skill, not just the first one.
+        picked = list(dict.fromkeys(skill for skill in picked if skill in SKILL_OPTIONS))
+
+        # Clicking a chip removes only that skill.
+        removed = request.args.get("remove_skill")
+        if removed in picked:
+            picked.remove(removed)
+
+        wanted = picked
+
+    elif filter_mode == "profile":
+        # My Profile: use skills saved in the signed-in user's profile.
+        wanted = my_skills
+        picked = []
+
+    else:
+        # Default: show all active listings in the chosen direction.
+        wanted = None
+        picked = []
+
+    # Find active listings from other users in the database.
+    listings = Listing.query.filter(
+        Listing.type == their_type,
+        Listing.is_active.is_(True),
+        Listing.user_id != current_user.id
+    ).all()
+
+    matches_by_user = {}
+
+    for listing in listings:
+        skill_name = listing.skill.name
+
+        # In filtered views, skip skills outside the selected set.
+        # Default browsing has no skill restriction.
+        # Hide people without a matching skill in every filter mode.
+        if wanted is not None and skill_name not in wanted:
+            continue
+
+        user = listing.user
+
+        # Show each matching person only once, even if several skills match.
+        if user.id not in matches_by_user:
+            matches_by_user[user.id] = {
+                "person": {
+                    "name": user.username,
+                    "teaches": get_user_skills(user, "teach"),
+                    "learns": get_user_skills(user, "learn"),
+                },
+                "shared": [],
+                "profile_shared": [],
+            }
+
+        # Highlight only genuine profile matches, even in Default browsing.
+        # Display the skills relevant to the selected filter.
+        matches_by_user[user.id]["shared"].append(skill_name)
+
+        # Highlight skills that also match the signed-in user's profile.
+        if skill_name in my_skills:
+            matches_by_user[user.id]["profile_shared"].append(skill_name)
+
+    matches = list(matches_by_user.values())
+
+    # People with more matching skills appear first.
+    matches.sort(
+        key=lambda match: (
+            -len(match["shared"]),
+            match["person"]["name"].lower()
+        )
+    )
+
+    return render_template(
+        "dashboard.html",
+        mode=mode,
+        filter_mode=filter_mode,
+        picked=picked,
+        skills=SKILL_OPTIONS,
+        matches=matches
+    )
 
 # --- Profile ---
 
 @main.route("/profile", methods=["GET", "POST"])
 @login_required
 def profile():
-    """Change what you picked during onboarding. Uses the same chip pickers, pre-selected."""
-    if request.method == "POST":
-        # Kept in memory for now (like chat messages), so changes are lost when the server restarts
-        CURRENT_USER["learns"] = request.form.getlist("learns")
-        CURRENT_USER["teaches"] = request.form.getlist("teaches")
+    """View and update the signed-in user's learning and teaching skills."""
 
-        # "Save and filter by these" opens the dashboard already filtered by what I want to learn
+    if request.method == "POST":
+        # Save the skills for the current account, not a shared sample user.
+        # Save both skill categories together, or neither if saving fails.
+        try:
+            save_user_skills(
+                current_user,
+                "learn",
+                request.form.getlist("learns"),
+                commit=False
+            )
+
+            save_user_skills(
+                current_user,
+                "teach",
+                request.form.getlist("teaches"),
+                commit=False
+            )
+
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+
+        # Open the dashboard using the skills saved in this profile.
+        # Open the Learner dashboard with My Profile filtering selected.
         if request.form.get("then") == "filter":
-            return redirect(url_for("main.dashboard", mode="learner", skill=CURRENT_USER["learns"]))
+            return redirect(
+                url_for("main.dashboard", mode="learner", filter="profile")
+            )
+
         return redirect(url_for("main.dashboard"))
-    return render_template("profile.html", user=CURRENT_USER, options=SKILL_OPTIONS)
+
+    # Read the saved skills belonging to the signed-in user.
+    profile_data = {
+        "name": current_user.username,
+        "learns": get_user_skills(current_user, "learn"),
+        "teaches": get_user_skills(current_user, "teach"),
+    }
+
+    return render_template(
+        "profile.html",
+        user=profile_data,
+        options=SKILL_OPTIONS
+    )
 
 
 # --- Messages ---
@@ -182,7 +381,11 @@ def messages():
 @login_required
 def chat(name):
     """My chat with one person. "Connect" on the dashboard opens this page."""
-    if name not in [person["name"] for person in PEOPLE]:
+    # Check that the person exists in the database.
+    # The dashboard now displays real users instead of sample people.
+    other_user = User.query.filter_by(username=name).first()
+
+    if other_user is None or other_user.id == current_user.id:
         abort(404)
 
     # Start an empty chat the first time someone connects
