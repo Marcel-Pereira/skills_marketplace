@@ -15,36 +15,47 @@ class FormParser(HTMLParser):
     def __init__(self, page):
         super().__init__()
         self.inputs = []
-        self.options = []
+        self.forms = []
+        self.form = None
+        self.buttons = []
+        self.links = {}
         self.groups = []
         self.names = []
-        self.select = None
-        self.heading = None
+        self.tag = None
         self.feed(page.decode() if isinstance(page, bytes) else page)
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
-        if tag == "input":
+        if tag == "form":
+            self.form = []
+            self.forms.append(self.form)
+        elif tag == "input":
             self.inputs.append(attrs)
-        elif tag == "select":
-            self.select = attrs.get("name")
-        elif tag == "option":
-            self.options.append((self.select, attrs))
-        elif tag == "optgroup":
-            self.groups.append(attrs.get("label"))
-        elif tag == "h3":
-            self.heading = []
+            if self.form is not None:
+                self.form.append(attrs)
+        elif tag == "button":
+            self.buttons.append(attrs)
+        elif tag in ("h3", "legend", "a"):
+            self.tag = tag
+            self.text = []
+            self.href = attrs.get("href")
 
     def handle_data(self, data):
-        if self.heading is not None:
-            self.heading.append(data)
+        if self.tag:
+            self.text.append(data)
 
     def handle_endtag(self, tag):
-        if tag == "select":
-            self.select = None
-        elif tag == "h3" and self.heading is not None:
-            self.names.append("".join(self.heading).strip())
-            self.heading = None
+        if tag == "form":
+            self.form = None
+        elif tag == self.tag:
+            label = "".join(self.text).strip()
+            if tag == "h3":
+                self.names.append(label)
+            elif tag == "legend":
+                self.groups.append(label)
+            else:
+                self.links[label] = self.href
+            self.tag = None
 
     def choices(self, name, checked=False):
         return {
@@ -116,11 +127,7 @@ def test_every_skill_picker_uses_the_same_category_catalog(app, authenticated_cl
         assert not any("custom-skill" in item.get("class", "") for item in form.inputs)
 
     dashboard = FormParser(authenticated_client.get("/dashboard").data)
-    assert {
-        int(attrs["value"])
-        for name, attrs in dashboard.options
-        if name == "skill" and attrs.get("value")
-    } == expected_ids
+    assert dashboard.choices("skill") == expected_ids
     assert set(dashboard.groups) == expected_categories
 
 
@@ -253,11 +260,7 @@ def test_equal_names_in_different_categories_stay_distinct(
             ).data
         )
         assert filtered.names == ["second-category-person"]
-        assert {
-            int(attrs["value"])
-            for name, attrs in filtered.options
-            if name == "skill" and "selected" in attrs
-        } == {second_id}
+        assert filtered.choices("skill", checked=True) == {second_id}
 
     # Legacy names are accepted only when they identify exactly one catalog skill.
     assert save_profile(
@@ -270,6 +273,67 @@ def test_equal_names_in_different_categories_stay_distinct(
         )
         assert filtered.status_code == 200
         assert FormParser(filtered.data).names == []
+    mixed = FormParser(
+        authenticated_client.get(
+            "/dashboard",
+            query_string={
+                "filter": "skill",
+                "skill": [second_id, "Shared skill label", "unknown"],
+            },
+        ).data
+    )
+    assert mixed.names == ["second-category-person"]
+    assert mixed.choices("skill", checked=True) == {second_id}
+
+
+def test_removing_a_filter_and_clearing_restores_everyone(app, authenticated_client):
+    spanish, python = skill_ids(app, "Spanish", "Python")
+    add_person(app, "spanish-learner", learns=[spanish])
+    add_person(app, "python-learner", learns=[python])
+    add_person(app, "guitar-learner", learns=skill_ids(app, "Guitar"))
+    query = {"mode": "sharer", "filter": "skill", "skill": [spanish, python, spanish]}
+    initial = FormParser(authenticated_client.get("/dashboard", query_string=query).data)
+    buttons = [
+        int(item["value"]) for item in initial.buttons if item.get("name") == "remove_skill"
+    ]
+    assert sorted(buttons) == sorted([spanish, python])
+    removed = FormParser(
+        authenticated_client.get("/dashboard", query_string={**query, "remove_skill": spanish}).data
+    )
+    assert removed.choices("skill", checked=True) == {python}
+    assert removed.names == ["python-learner"]
+
+    cleared = FormParser(authenticated_client.get(removed.links["Clear all"]).data)
+    assert cleared.choices("skill", checked=True) == set()
+    assert set(cleared.names) == {"spanish-learner", "python-learner", "guitar-learner"}
+
+
+def test_profile_switch_keeps_both_panels_in_the_saved_form(app, authenticated_client, user_id):
+    spanish, python, guitar = skill_ids(app, "Spanish", "Python", "Guitar")
+    assert save_profile(authenticated_client, [spanish], [python]).status_code == 302
+    profile = FormParser(authenticated_client.get("/profile").data)
+    radios = {item.get("id") for item in profile.inputs if item.get("type") == "radio"}
+    assert {"profile-learn", "profile-teach"} <= radios
+    searches = {item.get("id") for item in profile.inputs if item.get("type") == "search"}
+    assert {"search-learns", "search-teaches"} <= searches
+    skill_forms = [
+        form for form in profile.forms if any(item.get("name") == "learns" for item in form)
+    ]
+    assert len(skill_forms) == 1
+    fields = [item for item in skill_forms[0] if item.get("name") in ("learns", "teaches")]
+    assert all("disabled" not in item for item in fields)
+    checked = {
+        name: [item["value"] for item in fields if item["name"] == name and "checked" in item]
+        for name in ("learns", "teaches")
+    }
+    assert checked == {"learns": [str(spanish)], "teaches": [str(python)]}
+
+    # Change one side of the form and submit the other side as it was rendered.
+    checked["learns"] = [str(guitar)]
+    response = authenticated_client.post("/profile", data=checked)
+    assert response.status_code == 302
+    assert active_skills(app, user_id, "learn") == {guitar}
+    assert active_skills(app, user_id, "teach") == {python}
 
 
 def test_repeated_saves_and_reselection_preserve_existing_listing_details(

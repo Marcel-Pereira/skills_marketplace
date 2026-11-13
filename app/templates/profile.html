@@ -3,22 +3,37 @@
 {% block title %}Profile{% endblock %}
 {% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
 {% block nav_links %}{{ signed_in_nav() }}{% endblock %}
+{% block styles %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='profile-skills.css') }}">
+{% endblock %}
 {% block content %}
   <h1>Your profile</h1>
-  <p class="muted">Signed in as {{ user.name }}. Change your skills any time; the dashboard uses them to find your matches.</p>
+  <p class="muted">Signed in as {{ user.name }}</p>
 
-  <form method="post">
-    <h2>What do you want to learn?</h2>
-    {{ chip_picker("learns", categories, user.learns) }}
+  <div class="profile-skills">
+    <fieldset class="profile-modes">
+      <legend>Skills to edit</legend>
+      <label><input id="profile-learn" type="radio" name="profile-view" aria-controls="panel-learns" checked> Learn</label>
+      <label><input id="profile-teach" type="radio" name="profile-view" aria-controls="panel-teaches"> Teach</label>
+    </fieldset>
 
-    <h2>What can you teach?</h2>
-    {{ chip_picker("teaches", categories, user.teaches) }}
-
-    {# Both buttons submit the same form; "then" tells the route where to go after saving #}
-    <div class="actions">
-      <button>Save</button>
-      <button name="then" value="filter" class="secondary">Save and filter by these</button>
-    </div>
-  </form>
-
+    <form method="post">
+      {% for field, direction, heading in [('learns', 'learning', 'What do you want to learn?'), ('teaches', 'teaching', 'What can you teach?')] %}
+        <section id="panel-{{ field }}" class="profile-editor" aria-labelledby="heading-{{ field }}">
+          <h2 id="heading-{{ field }}">{{ heading }}</h2>
+          <div class="profile-search" hidden>
+            <label for="search-{{ field }}">Search {{ direction }} skills</label>
+            <input type="search" id="search-{{ field }}" placeholder="Skill or category" autocomplete="off">
+          </div>
+          {{ chip_picker(field, categories, user[field]) }}
+          <p class="muted" role="status" hidden>No matching skills.</p>
+        </section>
+      {% endfor %}
+      <div class="actions">
+        <button>Save</button>
+        <button name="then" value="filter" class="secondary">Save and find teachers</button>
+      </div>
+    </form>
+  </div>
+  <script src="{{ url_for('static', filename='profile-skills.js') }}" defer></script>
 {% endblock %}

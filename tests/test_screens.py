@@ -148,27 +148,17 @@ def test_sharer_skill_filter_shows_people_who_want_to_learn_it(
     assert b"<h3>Linh</h3>" in spanish_page
     assert b"<h3>Mateo</h3>" not in spanish_page
 
-def test_single_skill_filter_selects_one_skill(authenticated_client, skill_ids):
-    """The By Skill filter should select one skill at a time."""
-
-    # Open the dashboard with Spanish selected.
+def test_skill_filter_shows_selected_skills(authenticated_client, skill_ids):
+    spanish_id = skill_ids["Spanish"]
     response = authenticated_client.get(
-        "/dashboard?mode=learner&filter=skill&skill=Spanish"
+        "/dashboard", query_string={"mode": "learner", "filter": "skill", "skill": spanish_id}
     )
-
     assert response.status_code == 200
-
-    page = response.data.decode()
-
-    # The selected skill should appear in the dropdown.
-    assert f'value="{skill_ids["Spanish"]}"' in page
-    assert "selected" in page
-
-    # The filter form should use the single-skill filtering mode.
+    page = response.get_data(as_text=True)
+    assert f'name="remove_skill" value="{spanish_id}"' in page
+    assert "By Skill (1)" in page
     assert 'name="filter" value="skill"' in page
-
-    # The user should be able to switch back to Default or My Profile.
-    assert "Default" in page
+    assert "Everyone" in page
     assert "My Profile" in page
 
 
@@ -598,3 +588,76 @@ def test_default_and_profile_have_distinct_results(
     assert b"<h3>Jiwoo</h3>" in profile_page
     assert b"<h3>Wei</h3>" not in profile_page
     assert b"<h3>Sam</h3>" not in profile_page
+
+
+@pytest.mark.parametrize(
+    "mode,skills,expected",
+    [
+        ("learner", ("Spanish", "Guitar", "Graphic Design"), {"Mateo", "Jiwoo"}),
+        ("sharer", ("Spanish", "Guitar", "Python"), {"Linh", "Mateo"}),
+    ],
+)
+def test_multiple_skill_filters(
+    authenticated_client, matching_data, skill_ids, mode, skills, expected
+):
+    """Match any selected skill and show each matching person once."""
+    ids = [skill_ids[name] for name in skills]
+    page = authenticated_client.get(
+        "/dashboard",
+        query_string={"mode": mode, "filter": "skill", "skill": [*ids, ids[0]]},
+    ).get_data(as_text=True)
+    for person in PEOPLE:
+        name = person["name"]
+        assert page.count(f"<h3>{name}</h3>") == int(name in expected)
+
+
+def test_removing_one_skill_keeps_other_filters(authenticated_client, matching_data, skill_ids):
+    spanish, design = skill_ids["Spanish"], skill_ids["Graphic Design"]
+    page = authenticated_client.get(
+        "/dashboard",
+        query_string={
+            "mode": "learner",
+            "filter": "skill",
+            "skill": [spanish, design],
+            "remove_skill": spanish,
+        },
+    ).data
+    assert b"<h3>Jiwoo</h3>" in page
+    assert b"<h3>Mateo</h3>" not in page
+
+
+def test_profile_save_preserves_listing_details(
+    authenticated_client, app, user_id
+):
+    """Saving unchanged skills must preserve listing details and IDs."""
+    from app import db
+    from app.models import Listing
+
+    authenticated_client.post(
+        "/profile",
+        data={"learns": ["Spanish"], "teaches": ["Python"]}
+    )
+
+    with app.app_context():
+        listing = Listing.query.filter_by(
+            user_id=user_id, type="learn"
+        ).first()
+
+        original_id = listing.id
+        listing.level = "advanced"
+        listing.description = "I want to practice conversation."
+        db.session.commit()
+
+    authenticated_client.post(
+        "/profile",
+        data={"learns": ["Spanish"], "teaches": ["Python"]}
+    )
+
+    with app.app_context():
+        listing = Listing.query.filter_by(
+            user_id=user_id, type="learn"
+        ).first()
+
+        assert listing.id == original_id
+        assert listing.level == "advanced"
+        assert listing.description == "I want to practice conversation."

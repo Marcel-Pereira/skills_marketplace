@@ -17,10 +17,11 @@ def get_categories():
             .order_by(Category.name).all())
 
 
-def catalog_skill_ids(values):
+def catalog_skill_ids(values, *, ignore_unknown=False):
     """Validate selections without creating skills or guessing ambiguous names.
 
     New forms use IDs. Unique names from older forms and links still work.
+    A search can skip stale selections, while a profile save rejects them.
     """
     skills = Skill.query.all()
     by_id = {str(skill.id): skill.id for skill in skills}
@@ -37,7 +38,7 @@ def catalog_skill_ids(values):
             selected.add(by_id[value])
         elif len(by_name.get(value, [])) == 1:
             selected.add(by_name[value][0])
-        else:
+        elif not ignore_unknown:
             raise ValueError("Choose skills from the available list.")
     return selected
 
@@ -205,46 +206,46 @@ def dashboard():
         mode = "learner"
 
     my_type, their_type = ("teach", "learn") if mode == "sharer" else ("learn", "teach")
-    my_skills = get_user_skill_ids(current_user, my_type)
+    my_skill_ids = get_user_skill_ids(current_user, my_type)
     filter_mode = request.args.get("filter", "default")
     if filter_mode not in ("default", "skill", "profile"):
         filter_mode = "default"
 
-    picked = []
-    # Keep older ?skill=Spanish links working when the name is unambiguous.
-    if filter_mode == "skill" or (filter_mode == "default" and request.args.get("skill")):
+    skill_values = request.args.getlist("skill")
+    selected_skill_ids = set()
+    filter_skill_ids = None
+    if filter_mode == "profile":
+        filter_skill_ids = my_skill_ids
+    elif filter_mode == "skill" or skill_values:
         filter_mode = "skill"
-        try:
-            picked = sorted(catalog_skill_ids([request.args.get("skill", "")]))
-        except ValueError:
-            pass  # An unknown or ambiguous selection must not show everyone.
-        wanted = set(picked)
-    elif filter_mode == "profile":
-        wanted = my_skills
-    else:
-        wanted = None
+        selected_skill_ids = catalog_skill_ids(skill_values, ignore_unknown=True)
+        # Accept remove links from the earlier checkbox dashboard as well.
+        removed = request.args.get("remove_skill")
+        if removed:
+            selected_skill_ids -= catalog_skill_ids([removed], ignore_unknown=True)
+        filter_skill_ids = selected_skill_ids
 
     listings = Listing.query.filter(
         Listing.type == their_type, Listing.is_active.is_(True),
         Listing.user_id != current_user.id
     ).options(selectinload(Listing.skill), selectinload(Listing.user))
-    if wanted is not None:
-        listings = listings.filter(Listing.skill_id.in_(wanted))
+    if filter_skill_ids is not None:
+        listings = listings.filter(Listing.skill_id.in_(filter_skill_ids))
 
     matches_by_user = {}
     for listing in listings.all():
         match = matches_by_user.setdefault(listing.user_id, {
-            "person": {"name": listing.user.username},
-            "shared": [], "profile_shared": my_skills,
+            "person": {"name": listing.user.username}, "displayed_skills": [],
         })
-        match["shared"].append(listing.skill)
+        match["displayed_skills"].append(listing.skill)
 
     matches = sorted(matches_by_user.values(), key=lambda match: (
-        -len(match["shared"]), match["person"]["name"].lower()
+        -len(match["displayed_skills"]), match["person"]["name"].lower()
     ))
     return render_template(
         "dashboard.html", mode=mode, filter_mode=filter_mode,
-        picked=picked, categories=get_categories(), matches=matches
+        selected_skill_ids=sorted(selected_skill_ids), my_skill_ids=my_skill_ids,
+        categories=get_categories(), matches=matches,
     )
 
 

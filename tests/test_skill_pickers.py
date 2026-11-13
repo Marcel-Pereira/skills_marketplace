@@ -1,73 +1,69 @@
-"""The skill pickers only offer the fixed catalog, and the server refuses anything else (issue #18)."""
-from app import db
-from app.models import Category, Skill
-from app.sample_data import CURRENT_USER
+"""The skill pickers offer the fixed catalog and refuse custom choices (issue #18)."""
+
+import pytest
+
+from app.models import Category, Listing, Skill
 
 
-def test_profile_picker_lists_the_catalog_and_has_no_free_text_box(authenticated_client, catalog):
-    page = authenticated_client.get("/profile").data.decode()
+def test_profile_picker_lists_the_catalog_and_has_no_free_text_box(authenticated_client, skill_ids):
+    page = authenticated_client.get("/profile").get_data(as_text=True)
 
-    assert "Programming" in page  # a category heading
-    assert 'value="Python"' in page  # a catalog skill
-    assert "custom-skill" not in page  # the "type your own skill" box is gone
-    assert "chips.js" not in page  # and so is the script that powered it
-
-
-def test_onboarding_pickers_list_the_catalog(authenticated_client, catalog):
-    for path in ("/onboarding/learn", "/onboarding/teach"):
-        page = authenticated_client.get(path).data.decode()
-        assert 'value="Spanish"' in page
-        assert "custom-skill" not in page
+    assert "Programming" in page
+    assert f'value="{skill_ids["Python"]}"' in page
+    assert "custom-skill" not in page
+    assert "chips.js" not in page
 
 
-def test_saved_choices_stay_selected(authenticated_client, catalog, current_user_skills):
-    authenticated_client.post(
-        "/profile", data={"learns": ["Cooking", "Piano"], "teaches": ["Python"]}
+@pytest.mark.parametrize("path", ["/onboarding/learn", "/onboarding/teach"])
+def test_onboarding_pickers_list_the_catalog(authenticated_client, skill_ids, path):
+    page = authenticated_client.get(path).get_data(as_text=True)
+    assert f'value="{skill_ids["Spanish"]}"' in page
+    assert "custom-skill" not in page
+
+
+def test_saved_choices_stay_selected(authenticated_client, skill_ids):
+    response = authenticated_client.post(
+        "/profile",
+        data={
+            "learns": [skill_ids["Cooking"], skill_ids["Piano"]],
+            "teaches": [skill_ids["Python"]],
+        },
     )
-
-    page = authenticated_client.get("/profile").data.decode()
-    assert 'value="Cooking" checked' in page
-    assert 'value="Piano" checked' in page
-    assert 'value="Python" checked' in page
-    # what I did not pick is not selected
-    assert 'value="Spanish" checked' not in page
-    assert 'value="Guitar" checked' not in page
+    assert response.status_code == 302
+    page = authenticated_client.get("/profile").get_data(as_text=True)
+    for name in ("Cooking", "Piano", "Python"):
+        assert f'value="{skill_ids[name]}" checked' in page
+    for name in ("Spanish", "Guitar"):
+        assert f'value="{skill_ids[name]}" checked' not in page
 
 
-def test_unknown_skills_are_rejected(app, authenticated_client, catalog, current_user_skills):
+@pytest.mark.parametrize(
+    "edits",
+    [
+        {"learns": ["Spanish", "Totally Fake Skill"], "teaches": ["Made Up Teaching", "Python"]},
+        {"learns": ["Spanish", "Totally Fake Skill"], "then": "filter"},
+        {"learns": ["Only Fake"]},
+    ],
+    ids=["mixed", "save-and-filter", "all-invalid"],
+)
+def test_unknown_skills_are_rejected(app, authenticated_client, user_id, skill_ids, edits):
+    saved = authenticated_client.post(
+        "/profile", data={"learns": [skill_ids["Piano"]], "teaches": [skill_ids["Guitar"]]}
+    )
+    assert saved.status_code == 302
     with app.app_context():
         skills_before = Skill.query.count()
         categories_before = Category.query.count()
 
-    response = authenticated_client.post(
-        "/profile",
-        data={"learns": ["Spanish", "Totally Fake Skill"], "teaches": ["Made Up Teaching", "Python"]},
-    )
-    assert response.status_code == 302
+    response = authenticated_client.post("/profile", data=edits)
+    assert response.status_code == 400
+    assert "Location" not in response.headers
 
-    # Only the catalog skills were kept
-    assert CURRENT_USER["learns"] == ["Spanish"]
-    assert CURRENT_USER["teaches"] == ["Python"]
-
-    page = authenticated_client.get("/profile").data.decode()
-    assert "Totally Fake Skill" not in page
-    assert "Made Up Teaching" not in page
-
-    # And nothing new was added to the catalog
     with app.app_context():
+        choices = Listing.query.filter_by(user_id=user_id, is_active=True)
+        assert {(row.type, row.skill.name) for row in choices} == {
+            ("learn", "Piano"),
+            ("teach", "Guitar"),
+        }
         assert Skill.query.count() == skills_before
         assert Category.query.count() == categories_before
-        assert Skill.query.filter_by(name="Totally Fake Skill").first() is None
-
-
-def test_unknown_skills_are_left_out_of_save_and_filter(authenticated_client, catalog, current_user_skills):
-    response = authenticated_client.post(
-        "/profile", data={"learns": ["Spanish", "Totally Fake Skill"], "then": "filter"}
-    )
-    assert response.headers["Location"] == "/dashboard?mode=learner&skill=Spanish"
-
-
-def test_nothing_valid_submitted_saves_an_empty_list(authenticated_client, catalog, current_user_skills):
-    authenticated_client.post("/profile", data={"learns": ["Only Fake"], "teaches": []})
-    assert CURRENT_USER["learns"] == []
-    assert CURRENT_USER["teaches"] == []

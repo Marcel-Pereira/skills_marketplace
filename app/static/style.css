@@ -5,6 +5,10 @@ nav .brand { font-weight: bold; color: inherit; text-decoration: none; }
 .signed-in-nav { display: flex; align-items: center; gap: 16px; }
 .signed-in-nav form { margin: 0; }
 .signed-in-nav button { background: none; color: #00e; padding: 0; border-radius: 0; text-decoration: underline; }
+@media (max-width: 32rem) {
+  nav { flex-wrap: wrap; gap: 8px; }
+  .signed-in-nav { flex-wrap: wrap; }
+}
 .muted { color: #777; }
 
 /* Centered box for the home, sign up and sign in screens */
