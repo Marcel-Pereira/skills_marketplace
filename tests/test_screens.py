@@ -14,16 +14,16 @@ def test_protected_screens_load(authenticated_client, path):
     assert authenticated_client.get(path).status_code == 200
 
 
-def test_signup_flow_goes_through_onboarding_to_dashboard(client, user_data):
+def test_signup_flow_goes_through_onboarding_to_dashboard(client, catalog, user_data):
     signup = client.post("/signup", data=user_data)
     assert signup.status_code == 302
     assert signup.headers["Location"] == "/onboarding/learn"
 
-    learn = client.post("/onboarding/learn", data={"learns": ["Spanish", "Guitar"]})
+    learn = client.post("/onboarding/learn", data={"learns": ["Spanish", "Guitar", "Cooking"]})
     assert learn.status_code == 302
     assert learn.headers["Location"] == "/onboarding/teach"
 
-    teach = client.post("/onboarding/teach", data={"teaches": ["Python"]})
+    teach = client.post("/onboarding/teach", data={"teaches": ["Python", "Statistics", "Marketing"]})
     assert teach.status_code == 302
     assert teach.headers["Location"] == "/dashboard"
     assert client.get("/dashboard").status_code == 200
@@ -70,13 +70,16 @@ def test_profile_preselects_my_skills(authenticated_client, catalog):
 
 
 def test_profile_save_and_filter(authenticated_client, catalog, current_user_skills):
+    learns, teaches = ["Cooking", "Piano", "Spanish"], ["Python", "Statistics", "Marketing"]
 
-    response = authenticated_client.post("/profile", data={"learns": ["Cooking"], "teaches": ["Python"]})
+    response = authenticated_client.post("/profile", data={"learns": learns, "teaches": teaches})
     assert response.headers["Location"] == "/dashboard"
-    assert CURRENT_USER["learns"] == ["Cooking"]
+    assert CURRENT_USER["learns"] == learns
 
-    response = authenticated_client.post("/profile", data={"learns": ["Cooking"], "then": "filter"})
-    assert response.headers["Location"] == "/dashboard?mode=learner&skill=Cooking"
+    response = authenticated_client.post(
+        "/profile", data={"learns": learns, "teaches": teaches, "then": "filter"}
+    )
+    assert response.headers["Location"] == "/dashboard?mode=learner&skill=Cooking&skill=Piano&skill=Spanish"
 
 
 def test_connect_opens_chat_and_sending_adds_message(authenticated_client):

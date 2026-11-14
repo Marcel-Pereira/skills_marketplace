@@ -9,10 +9,12 @@
 
   <form method="post">
     <h2>What do you want to learn?</h2>
-    {{ chip_picker("learns", categories, user.learns) }}
+    <p class="muted">Pick at least {{ min_skills }}.</p>
+    {{ chip_picker("learns", categories, pickers.learns) }}
 
     <h2>What can you teach?</h2>
-    {{ chip_picker("teaches", categories, user.teaches) }}
+    <p class="muted">Pick at least {{ min_skills }}.</p>
+    {{ chip_picker("teaches", categories, pickers.teaches) }}
 
     {# Both buttons submit the same form; "then" tells the route where to go after saving #}
     <div class="actions">

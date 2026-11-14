@@ -6,8 +6,8 @@
   <h1>{{ question }}</h1>
 
   <form method="post">
-    <p class="muted">Pick as many as you like.</p>
-    {{ chip_picker(field, categories) }}
+    <p class="muted">Pick at least {{ min_skills }}.</p>
+    {{ chip_picker(field, categories, pickers[field]) }}
     <button>Continue</button>
   </form>
 

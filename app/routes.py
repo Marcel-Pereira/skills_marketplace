@@ -114,25 +114,90 @@ def only_catalog_skills(names):
     known = {name for (name,) in rows}
     return [name for name in names if name in known]
 
+
+# Every picker (onboarding steps, profile) needs at least this many skills.
+MIN_SKILLS = 3
+
+
+def clean_selection(names):
+    """What a user really picked: catalog skills only, each counted once, in the order sent.
+    Counting once matters because the same skill can be submitted twice by a hand-made request."""
+    return list(dict.fromkeys(only_catalog_skills(names)))
+
+
+def min_skills_error(skills, purpose):
+    """Error message when fewer than MIN_SKILLS were picked, otherwise None.
+    purpose finishes the sentence, e.g. "to learn" or "to teach"."""
+    if len(skills) >= MIN_SKILLS:
+        return None
+    return f"Pick at least {MIN_SKILLS} skills {purpose} (you picked {len(skills)})."
+
+
+def search_skills(categories, query):
+    """Skills whose name contains the text (any case), as (skill, category) pairs.
+    It searches the categories already loaded for the picker, so it costs no extra query,
+    and there is no LIKE pattern for the user to inject (a "%" is just a character)."""
+    query = query.strip().lower()
+    if not query:
+        return []
+    return [(skill, category) for category in categories for skill in category.skills
+            if query in skill.name.lower()]
+
+
+def picker_state(field, selected, categories, form=None, searching=False):
+    """Everything the chip_picker macro needs for one picker.
+    selected: skill names to show as checked. form: the submitted form when the page is
+    re-rendered after a POST (None on a plain GET). The search text is only used when the
+    user pressed Search; on any other submit it is ignored."""
+    query = form.get(f"{field}_q", "").strip() if form is not None and searching else ""
+    results = search_skills(categories, query)
+    return {
+        "selected": selected,
+        "open_areas": form.getlist(f"{field}_areas") if form is not None else [],
+        "query": query,
+        "results": results,
+        "result_ids": {skill.id for skill, _ in results},
+    }
+
 # --- Onboarding ---
 # Both steps share onboarding.html; only the question, the field name and the next page change.
+
+def onboarding_step(step, question, field, purpose, next_endpoint):
+    """One onboarding step. A POST does one of two things, told apart by the button pressed:
+    - Search (action=search): show the same step again with the matching skills, keeping the picks.
+    - Continue: needs at least MIN_SKILLS picks, otherwise flash an error and show the step again."""
+    categories = get_categories()
+
+    def render(selected, searching=False, status=200):
+        form = request.form if request.method == "POST" else None
+        pickers = {field: picker_state(field, selected, categories, form, searching)}
+        return render_template("onboarding.html", step=step, question=question, field=field,
+                               categories=categories, pickers=pickers,
+                               min_skills=MIN_SKILLS), status
+
+    if request.method == "POST":
+        chosen = clean_selection(request.form.getlist(field))
+        if request.form.get("action") == "search":
+            return render(chosen, searching=True)
+        error = min_skills_error(chosen, purpose)
+        if error is None:
+            return redirect(url_for(next_endpoint))
+        flash(error, "error")
+        return render(chosen, status=400)  # the picks stay selected so they aren't lost
+    return render([])
+
 
 @main.route("/onboarding/learn", methods=["GET", "POST"])
 @login_required
 def onboarding_learn():
-    if request.method == "POST":
-        return redirect(url_for("main.onboarding_teach"))
-    return render_template("onboarding.html", step=1, question="What do you want to learn?",
-                           field="learns", categories=get_categories())
+    return onboarding_step(1, "What do you want to learn?", "learns", "to learn",
+                           "main.onboarding_teach")
 
 
 @main.route("/onboarding/teach", methods=["GET", "POST"])
 @login_required
 def onboarding_teach():
-    if request.method == "POST":
-        return redirect(url_for("main.dashboard"))
-    return render_template("onboarding.html", step=2, question="What can you teach?",
-                           field="teaches", categories=get_categories())
+    return onboarding_step(2, "What can you teach?", "teaches", "to teach", "main.dashboard")
 
 
 # --- Dashboard ---
@@ -175,17 +240,40 @@ def dashboard():
 @main.route("/profile", methods=["GET", "POST"])
 @login_required
 def profile():
-    """Change what you picked during onboarding. Uses the same chip pickers, pre-selected."""
+    """Change what you picked during onboarding. Uses the same chip pickers, pre-selected.
+    Both lists need at least MIN_SKILLS skills; nothing is saved unless both do.
+    The Search button re-renders the page without saving or validating."""
+    categories = get_categories()
+
+    def render(learns, teaches, searching=False, status=200):
+        form = request.form if request.method == "POST" else None
+        pickers = {"learns": picker_state("learns", learns, categories, form, searching),
+                   "teaches": picker_state("teaches", teaches, categories, form, searching)}
+        return render_template("profile.html", user=CURRENT_USER, categories=categories,
+                               pickers=pickers, min_skills=MIN_SKILLS), status
+
     if request.method == "POST":
+        learns = clean_selection(request.form.getlist("learns"))
+        teaches = clean_selection(request.form.getlist("teaches"))
+        if request.form.get("action") == "search":
+            return render(learns, teaches, searching=True)
+
+        errors = [min_skills_error(learns, "to learn"), min_skills_error(teaches, "to teach")]
+        errors = [error for error in errors if error]
+        if errors:
+            for error in errors:
+                flash(error, "error")
+            return render(learns, teaches, status=400)  # keep both lists as submitted
+
         # Kept in memory for now (like chat messages), so changes are lost when the server restarts
-        CURRENT_USER["learns"] = only_catalog_skills(request.form.getlist("learns"))
-        CURRENT_USER["teaches"] = only_catalog_skills(request.form.getlist("teaches"))
+        CURRENT_USER["learns"] = learns
+        CURRENT_USER["teaches"] = teaches
 
         # "Save and filter by these" opens the dashboard already filtered by what I want to learn
         if request.form.get("then") == "filter":
             return redirect(url_for("main.dashboard", mode="learner", skill=CURRENT_USER["learns"]))
         return redirect(url_for("main.dashboard"))
-    return render_template("profile.html", user=CURRENT_USER, categories=get_categories())
+    return render(CURRENT_USER["learns"], CURRENT_USER["teaches"])
 
 
 # --- Messages ---

@@ -22,7 +22,8 @@ def test_onboarding_pickers_list_the_catalog(authenticated_client, catalog):
 
 def test_saved_choices_stay_selected(authenticated_client, catalog, current_user_skills):
     authenticated_client.post(
-        "/profile", data={"learns": ["Cooking", "Piano"], "teaches": ["Python"]}
+        "/profile",
+        data={"learns": ["Cooking", "Piano", "Photography"], "teaches": ["Python", "Statistics", "Marketing"]},
     )
 
     page = authenticated_client.get("/profile").data.decode()
@@ -41,13 +42,14 @@ def test_unknown_skills_are_rejected(app, authenticated_client, catalog, current
 
     response = authenticated_client.post(
         "/profile",
-        data={"learns": ["Spanish", "Totally Fake Skill"], "teaches": ["Made Up Teaching", "Python"]},
+        data={"learns": ["Spanish", "Guitar", "Cooking", "Totally Fake Skill"],
+              "teaches": ["Made Up Teaching", "Python", "Statistics", "Marketing"]},
     )
     assert response.status_code == 302
 
     # Only the catalog skills were kept
-    assert CURRENT_USER["learns"] == ["Spanish"]
-    assert CURRENT_USER["teaches"] == ["Python"]
+    assert CURRENT_USER["learns"] == ["Spanish", "Guitar", "Cooking"]
+    assert CURRENT_USER["teaches"] == ["Python", "Statistics", "Marketing"]
 
     page = authenticated_client.get("/profile").data.decode()
     assert "Totally Fake Skill" not in page
@@ -62,12 +64,19 @@ def test_unknown_skills_are_rejected(app, authenticated_client, catalog, current
 
 def test_unknown_skills_are_left_out_of_save_and_filter(authenticated_client, catalog, current_user_skills):
     response = authenticated_client.post(
-        "/profile", data={"learns": ["Spanish", "Totally Fake Skill"], "then": "filter"}
+        "/profile",
+        data={"learns": ["Spanish", "Guitar", "Cooking", "Totally Fake Skill"],
+              "teaches": ["Python", "Statistics", "Marketing"], "then": "filter"},
     )
-    assert response.headers["Location"] == "/dashboard?mode=learner&skill=Spanish"
+    assert response.headers["Location"] == "/dashboard?mode=learner&skill=Spanish&skill=Guitar&skill=Cooking"
 
 
-def test_nothing_valid_submitted_saves_an_empty_list(authenticated_client, catalog, current_user_skills):
-    authenticated_client.post("/profile", data={"learns": ["Only Fake"], "teaches": []})
-    assert CURRENT_USER["learns"] == []
-    assert CURRENT_USER["teaches"] == []
+def test_nothing_valid_submitted_is_refused_and_keeps_the_old_skills(
+        authenticated_client, catalog, current_user_skills):
+    before = {"learns": list(CURRENT_USER["learns"]), "teaches": list(CURRENT_USER["teaches"])}
+
+    response = authenticated_client.post("/profile", data={"learns": ["Only Fake"], "teaches": []})
+
+    assert response.status_code == 400
+    assert CURRENT_USER["learns"] == before["learns"]
+    assert CURRENT_USER["teaches"] == before["teaches"]
