@@ -26,25 +26,6 @@
 
 {% macro chip_picker(name, categories, picker) %}
   <div class="chip-picker">
-    <div class="skill-search">
-      <input type="search" name="{{ name }}_q" value="{{ picker.query }}" placeholder="Search skills" aria-label="Search skills">
-      <button name="action" value="search" class="secondary">Search</button>
-    </div>
-
-    {% if picker.query %}
-      <div class="search-results">
-        {% if picker.results %}
-          <div class="chips">
-            {% for skill, category in picker.results %}
-              <label class="chip"><input type="checkbox" name="{{ name }}" value="{{ skill.name }}" {% if skill.name in picker.selected %}checked{% endif %}>{{ skill.name }} <span class="category-note">{{ category.name }}</span></label>
-            {% endfor %}
-          </div>
-        {% else %}
-          <p class="muted">No skills match that search.</p>
-        {% endif %}
-      </div>
-    {% endif %}
-
     <div class="areas">
       {% for category in categories %}
         {% set toggle_id = name ~ "-area-" ~ category.id %}
@@ -62,6 +43,28 @@
           </div>
         </div>
       {% endfor %}
+      {# Under the area chips: the instruction, then search, then the open skill lists (see "order" in style.css) #}
+      <h2 class="pick-hint">Open a few areas to browse their skills, then pick at least {{ picker.min_skills }}.</h2>
+      {# Search sits under the instruction, above the open skill lists #}
+      <div class="skill-search">
+        <input type="search" name="{{ name }}_q" value="{{ picker.query }}" placeholder="Search skills" aria-label="Search skills">
+        <button name="action" value="search" class="secondary">Search</button>
+      </div>
+
+      {% if picker.query %}
+        <div class="search-results">
+          {% if picker.results %}
+            <div class="chips">
+              {% for skill, category in picker.results %}
+                <label class="chip"><input type="checkbox" name="{{ name }}" value="{{ skill.name }}" {% if skill.name in picker.selected %}checked{% endif %}>{{ skill.name }} <span class="category-note">{{ category.name }}</span></label>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="muted">No skills match that search.</p>
+          {% endif %}
+        </div>
+      {% endif %}
+
     </div>
   </div>
 {% endmacro %}

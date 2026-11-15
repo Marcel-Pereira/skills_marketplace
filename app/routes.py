@@ -223,6 +223,7 @@ def picker_state(field, selected, categories, form=None, searching=False):
         "query": query,
         "results": results,
         "result_ids": {skill.id for skill, _ in results},
+        "min_skills": MIN_SKILLS,
     }
 
 # --- Onboarding ---

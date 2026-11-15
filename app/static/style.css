@@ -40,9 +40,9 @@ label.chip { cursor: pointer; }
    in front of each area chip remembers if the area is open, and the CSS shows its skills panel.
    .area is display: contents, so the chips and the panels become items of the same flex row
    and "order" puts all chips first and the open panels underneath them. */
-.skill-search { display: flex; gap: 8px; margin: 16px 0; }
+.skill-search { order: 3; flex: 0 0 100%; display: flex; gap: 8px; margin: 8px 0; }
 .skill-search input { flex: 1; }
-.search-results { margin-bottom: 16px; }
+.search-results { order: 4; flex: 0 0 100%; margin-bottom: 16px; }
 .category-note { margin-left: 4px; font-size: 0.8em; opacity: 0.6; }
 .areas { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 24px; }
 .area { display: contents; }
@@ -52,7 +52,11 @@ label.chip { cursor: pointer; }
    but never the black fill that a picked skill (a round chip) gets. */
 .area-chip { order: 1; margin: 0; border-radius: 6px; background: #fff; }
 .area-toggle:checked + .area-chip { border-color: #222; font-weight: 600; }
-.panel { display: none; order: 2; flex: 0 0 100%; border-top: 1px solid #eee; padding-top: 8px; }
+/* Order inside .areas: area chips (1), the "pick at least 3" instruction (2), search (3),
+   search results (4), then the open skill lists (5). The instruction is big and dark so it
+   can't be missed. */
+.pick-hint { order: 2; flex: 0 0 100%; margin: 20px 0 4px; font-size: 1.5em; color: #222; }
+.panel { display: none; order: 5; flex: 0 0 100%; border-top: 1px solid #eee; padding-top: 8px; }
 .area-toggle:checked ~ .panel { display: block; }
 .panel-title { margin: 0; font-weight: 600; }
 .panel .chips { margin: 8px 0 12px; }  /* tighter than the default chips spacing */
