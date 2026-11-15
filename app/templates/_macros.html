@@ -27,7 +27,7 @@
 {% macro chip_picker(name, categories, picker) %}
   <div class="chip-picker">
     <div class="areas">
-      <p class="muted area-hint">Pick a few areas you're interested in to see their skills.</p>
+      <p class="muted area-hint">Pick a few areas you're interested in.</p>
       {% for category in categories %}
         {% set toggle_id = name ~ "-area-" ~ category.id %}
         {% set is_open = (category.id | string) in picker.open_areas or (category.skills | selectattr('name', 'in', picker.selected) | list) %}
