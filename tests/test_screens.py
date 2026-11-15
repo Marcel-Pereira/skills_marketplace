@@ -674,3 +674,14 @@ def test_profile_save_preserves_listing_details(
         assert listing.id == original_id
         assert listing.level == "advanced"
         assert listing.description == "I want to practice conversation."
+
+
+def test_skill_filter_applies_instantly_and_shows_picked_skills_as_chips(authenticated_client, matching_data):
+    """Ticking a skill submits the filter right away, and picked skills are small removable chips."""
+    page = authenticated_client.get(
+        "/dashboard?mode=learner&filter=skill&skill=Spanish"
+    ).data.decode()
+
+    assert 'onchange="this.submit()"' in page
+    assert ">Apply<" not in page
+    assert 'class="chip remove-chip"' in page and 'value="Spanish"' in page
