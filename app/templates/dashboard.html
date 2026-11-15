@@ -36,8 +36,10 @@
       My Profile
     </a>
 
-    {# By Skill: allow several skills to be selected together. #}
-    <form method="get">
+    {# By Skill: allow several skills to be selected together. Ticking a box submits the form
+       right away (onchange), so there is no Apply button. The form is display: contents, so the
+       toggle, the picked-skill chips and "Clear all" sit in the same row as the other filters. #}
+    <form method="get" class="skill-filter" onchange="this.submit()">
       <input type="hidden" name="mode" value="{{ mode }}">
       <input type="hidden" name="filter" value="skill">
 
@@ -56,12 +58,11 @@
               </label>
             {% endfor %}
           {% endfor %}
-          <button type="submit">Apply</button>
         </div>
       </details>
 
       {% for skill in picked %}
-        <button type="submit" name="remove_skill" value="{{ skill }}"
+        <button type="submit" name="remove_skill" value="{{ skill }}" class="chip remove-chip"
                 aria-label="Remove {{ skill }}">
           {{ skill }} ×
         </button>
@@ -103,4 +104,11 @@
     <p class="muted">No one matches these skills yet. Try others, or add more skills on your <a href="{{ url_for('main.profile') }}">profile</a>.</p>
   {% endfor %}
 
+  <script>
+    // Close the By Skill dropdown when the user clicks anywhere outside it
+    const filter = document.querySelector(".filter");
+    document.addEventListener("click", function (event) {
+      if (!filter.contains(event.target)) filter.open = false;
+    });
+  </script>
 {% endblock %}
