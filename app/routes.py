@@ -91,9 +91,15 @@ def signup():
         email = request.form.get("email", "").strip().lower()
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
 
         if not email or not username or not password:
             flash("Email, username, and password are required.", "error")
+            return render_template("signup.html"), 400
+
+        # Typing the password twice catches typos before the account is created.
+        if password != confirm_password:
+            flash("Passwords do not match.", "error")
             return render_template("signup.html"), 400
 
         existing_user = User.query.filter(
@@ -125,13 +131,17 @@ def login():
         return redirect(url_for("main.dashboard"))
 
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
+        # One box accepts either the email or the username, since people often forget one.
+        # Emails are saved in lowercase (see signup), so compare the email in lowercase too.
+        login_name = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter(
+            or_(User.email == login_name.lower(), User.username == login_name)
+        ).first() if login_name else None
 
         if user is None or not user.check_password(password):
             return render_template(
-                "login.html", login_error="Invalid username or password."
+                "login.html", login_error="Invalid email/username or password."
             ), 401
 
         login_user(user)

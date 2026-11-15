@@ -5,9 +5,9 @@
     <h1>Login</h1>
     <p class="muted">Welcome back</p>
     <form method="post" class="stack">
-      <label>Username
+      <label>Email or username
         <input id="username" name="username" type="text" value="{{ request.form.get('username', '') }}"
-               autocomplete="username" maxlength="50" required autofocus>
+               autocomplete="username" maxlength="255" required autofocus>
       </label>
       <label>Password
         <input id="password" name="password" type="password" autocomplete="current-password" required>
