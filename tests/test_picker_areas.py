@@ -97,4 +97,5 @@ def test_picker_explains_that_areas_are_not_picks(authenticated_client, catalog)
     """Areas only open a list of skills; the page says so, so people don't stop after opening areas."""
     page = authenticated_client.get("/onboarding/learn").data.decode()
 
-    assert "Open a few areas to browse their skills, then pick at least 3." in page
+    assert "Pick a few areas you're interested in to see their skills." in page
+    assert "Pick at least 3 skills." in page

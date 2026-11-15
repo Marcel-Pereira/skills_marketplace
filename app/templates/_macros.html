@@ -27,6 +27,7 @@
 {% macro chip_picker(name, categories, picker) %}
   <div class="chip-picker">
     <div class="areas">
+      <p class="muted area-hint">Pick a few areas you're interested in to see their skills.</p>
       {% for category in categories %}
         {% set toggle_id = name ~ "-area-" ~ category.id %}
         {% set is_open = (category.id | string) in picker.open_areas or (category.skills | selectattr('name', 'in', picker.selected) | list) %}
@@ -43,8 +44,8 @@
           </div>
         </div>
       {% endfor %}
-      {# Under the area chips: the instruction, then search, then the open skill lists (see "order" in style.css) #}
-      <h2 class="pick-hint">Open a few areas to browse their skills, then pick at least {{ picker.min_skills }}.</h2>
+      {# Under the area chips: the skills section with its instruction, search and the open skill lists (see "order" in style.css) #}
+      <h2 class="pick-hint">Pick at least {{ picker.min_skills }} skills.</h2>
       {# Search sits under the instruction, above the open skill lists #}
       <div class="skill-search">
         <input type="search" name="{{ name }}_q" value="{{ picker.query }}" placeholder="Search skills" aria-label="Search skills">

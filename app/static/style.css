@@ -52,9 +52,10 @@ label.chip { cursor: pointer; }
    but never the black fill that a picked skill (a round chip) gets. */
 .area-chip { order: 1; margin: 0; border-radius: 6px; background: #fff; }
 .area-toggle:checked + .area-chip { border-color: #222; font-weight: 600; }
-/* Order inside .areas: area chips (1), the "pick at least 3" instruction (2), search (3),
-   search results (4), then the open skill lists (5). The instruction is big and dark so it
-   can't be missed. */
+/* Order inside .areas: the grey "pick a few areas" prompt (0), area chips (1), the "pick at
+   least 3 skills" instruction (2), search (3), search results (4), then the open skill lists (5).
+   The skills instruction is big and dark so it can't be missed. */
+.area-hint { order: 0; flex: 0 0 100%; margin: 0 0 4px; }
 .pick-hint { order: 2; flex: 0 0 100%; margin: 20px 0 4px; font-size: 1.5em; color: #222; }
 .panel { display: none; order: 5; flex: 0 0 100%; border-top: 1px solid #eee; padding-top: 8px; }
 .area-toggle:checked ~ .panel { display: block; }
