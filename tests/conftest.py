@@ -43,6 +43,7 @@ def user_data():
         "email": "test@example.com",
         "username": "test-user",
         "password": "secret-password",
+        "confirm_password": "secret-password",
     }
 
 
@@ -58,7 +59,10 @@ def user_id(app, user_data):
 
 @pytest.fixture
 def authenticated_client(client, user_id, user_data):
-    response = client.post("/login", data=user_data)
+    response = client.post(
+        "/login",
+        data={"username": user_data["username"], "password": user_data["password"]},
+    )
     assert response.status_code == 302
     assert response.headers["Location"] == "/dashboard"
     return client

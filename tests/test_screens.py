@@ -325,7 +325,7 @@ def test_users_have_separate_skill_profiles(app, client, user_id, catalog):
     response = client.post(
         "/login",
         data={
-            "email": "test@example.com",
+            "username": "test@example.com",
             "password": "secret-password"
         }
     )
@@ -357,7 +357,7 @@ def test_users_have_separate_skill_profiles(app, client, user_id, catalog):
     response = client.post(
         "/login",
         data={
-            "email": "second@example.com",
+            "username": "second@example.com",
             "password": "second-password"
         }
     )
@@ -389,7 +389,7 @@ def test_users_have_separate_skill_profiles(app, client, user_id, catalog):
     client.post(
         "/login",
         data={
-            "email": "test@example.com",
+            "username": "test@example.com",
             "password": "secret-password"
         }
     )

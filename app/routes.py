@@ -75,7 +75,9 @@ def save_user_skills(user, listing_type, skill_names, commit=True):
 
 @main.route("/")
 def index():
-    return render_template("index.html")
+    if current_user.is_authenticated:
+        return redirect(url_for("main.dashboard"))
+    return redirect(url_for("main.login"))
 
 
 # --- Accounts ---
@@ -89,12 +91,15 @@ def signup():
         email = request.form.get("email", "").strip().lower()
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        bio = request.form.get("bio", "").strip() or None
-        country_code = request.form.get("country_code", "").strip().upper() or None
-        timezone = request.form.get("timezone", "").strip() or None
+        confirm_password = request.form.get("confirm_password", "")
 
         if not email or not username or not password:
             flash("Email, username, and password are required.", "error")
+            return render_template("signup.html"), 400
+
+        # Typing the password twice catches typos before the account is created.
+        if password != confirm_password:
+            flash("Passwords do not match.", "error")
             return render_template("signup.html"), 400
 
         existing_user = User.query.filter(
@@ -104,13 +109,7 @@ def signup():
             flash("That email or username is already registered.", "error")
             return render_template("signup.html"), 409
 
-        user = User(
-            email=email,
-            username=username,
-            bio=bio,
-            country_code=country_code,
-            timezone=timezone,
-        )
+        user = User(email=email, username=username)
         user.set_password(password)
         db.session.add(user)
 
@@ -132,13 +131,18 @@ def login():
         return redirect(url_for("main.dashboard"))
 
     if request.method == "POST":
-        email = request.form.get("email", "").strip().lower()
+        # One box accepts either the email or the username, since people often forget one.
+        # Emails are saved in lowercase (see signup), so compare the email in lowercase too.
+        login_name = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        user = User.query.filter_by(email=email).first()
+        user = User.query.filter(
+            or_(User.email == login_name.lower(), User.username == login_name)
+        ).first() if login_name else None
 
         if user is None or not user.check_password(password):
-            flash("Invalid email or password.", "error")
-            return render_template("login.html"), 401
+            return render_template(
+                "login.html", login_error="Invalid email/username or password."
+            ), 401
 
         login_user(user)
         return redirect(url_for("main.dashboard"))
