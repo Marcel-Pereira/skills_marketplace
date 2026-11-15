@@ -19,7 +19,7 @@ def test_every_category_gets_an_area_chip_and_the_skills_are_not_headings(authen
 def test_area_with_a_selected_skill_starts_open_and_others_closed(app, authenticated_client, catalog):
     learns = ["Spanish", "Guitar", "Cooking"]
     authenticated_client.post("/profile", data={"learns": learns, "teaches": ["Python", "Statistics", "Marketing"]})
-    page = authenticated_client.get("/profile").data.decode()
+    page = authenticated_client.get("/profile?tab=skills").data.decode()
     open_ids = {category_id_of(app, name) for name in learns}
     with app.app_context():
         closed_id = Category.query.filter(~Category.id.in_(open_ids)).first().id
@@ -87,6 +87,6 @@ def test_profile_search_keeps_the_other_list_and_searches_both_boxes(authenticat
 
 def test_search_button_comes_before_the_submit_button_so_enter_searches(authenticated_client, catalog):
     # Enter in a text box presses the first submit button of the form
-    for path, last_button in (("/onboarding/learn", ">Continue<"), ("/profile", ">Save<")):
+    for path, last_button in (("/onboarding/learn", ">Continue<"), ("/profile?tab=skills", ">Save skills<")):
         page = authenticated_client.get(path).data.decode()
         assert page.index('value="search"') < page.index(last_button)

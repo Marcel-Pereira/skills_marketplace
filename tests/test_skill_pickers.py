@@ -4,7 +4,7 @@ from app.models import Category, Skill
 
 
 def test_profile_picker_lists_the_catalog_and_has_no_free_text_box(authenticated_client, catalog):
-    page = authenticated_client.get("/profile").data.decode()
+    page = authenticated_client.get("/profile?tab=skills").data.decode()
 
     assert "Programming" in page  # a category heading
     assert 'value="Python"' in page  # a catalog skill
@@ -25,7 +25,7 @@ def test_saved_choices_stay_selected(authenticated_client, catalog):
         data={"learns": ["Cooking", "Piano", "Photography"], "teaches": ["Python", "Statistics", "Marketing"]},
     )
 
-    page = authenticated_client.get("/profile").data.decode()
+    page = authenticated_client.get("/profile?tab=skills").data.decode()
     assert 'value="Cooking" checked' in page
     assert 'value="Piano" checked' in page
     assert 'value="Python" checked' in page
@@ -50,7 +50,7 @@ def test_unknown_skills_are_rejected(app, authenticated_client, catalog, saved_s
     assert saved_skills("learn") == ["Cooking", "Guitar", "Spanish"]
     assert saved_skills("teach") == ["Marketing", "Python", "Statistics"]
 
-    page = authenticated_client.get("/profile").data.decode()
+    page = authenticated_client.get("/profile?tab=skills").data.decode()
     assert "Totally Fake Skill" not in page
     assert "Made Up Teaching" not in page
 

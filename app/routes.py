@@ -1,3 +1,5 @@
+from datetime import date
+
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
 from app.sample_data import MESSAGES
@@ -8,6 +10,10 @@ from sqlalchemy.orm import selectinload
 
 from app import db
 from app.models import Category, Listing, Skill, User
+from app.profile_forms import (
+    COUNTRY_CODES, COUNTRY_OPTIONS, TIMEZONE_NAMES, TIMEZONE_OPTIONS,
+    profile_values, validate_profile_details,
+)
 
 main = Blueprint("main", __name__)
 
@@ -378,29 +384,61 @@ def dashboard():
 @main.route("/profile", methods=["GET", "POST"])
 @login_required
 def profile():
-    """Change the skills saved during onboarding, with the same pickers, pre-selected.
-    Both lists need at least MIN_SKILLS skills; nothing is saved unless both do.
-    The Search button re-renders the page without saving or validating."""
+    """The profile has two tabs, each with its own form:
+    - details: bio, date of birth, country and timezone, saved on the account.
+    - skills: the same pickers as onboarding; both lists need at least MIN_SKILLS skills.
+    The hidden "section" field says which form was sent. The Search button in the skills
+    tab re-renders the page without saving or validating."""
+    active_tab = request.args.get("tab", "details")
+    if active_tab not in ("details", "skills"):
+        active_tab = "details"
     categories = get_categories()
+    values = profile_values(current_user)
+    errors = {}
 
     def render(learns, teaches, searching=False, status=200):
-        form = request.form if request.method == "POST" else None
+        # Search text and open areas only come from a submitted skills form
+        sent_skills = request.method == "POST" and request.form.get("section", "skills") == "skills"
+        form = request.form if sent_skills else None
         pickers = {"learns": picker_state("learns", learns, categories, form, searching),
                    "teaches": picker_state("teaches", teaches, categories, form, searching)}
-        user = {"name": current_user.username}
-        return render_template("profile.html", user=user, categories=categories,
-                               pickers=pickers, min_skills=MIN_SKILLS), status
+        return render_template(
+            "profile.html", user=current_user, active_tab=active_tab,
+            values=values, errors=errors,
+            country_options=COUNTRY_OPTIONS, country_codes=COUNTRY_CODES,
+            timezone_options=TIMEZONE_OPTIONS, timezone_names=TIMEZONE_NAMES,
+            today=date.today().isoformat(),
+            categories=categories, pickers=pickers, min_skills=MIN_SKILLS,
+        ), status
 
     if request.method == "POST":
+        section = request.form.get("section", "skills")
+
+        if section == "details":
+            active_tab = "details"
+            values, changes, errors = validate_profile_details(request.form, current_user)
+            if not errors:
+                for field, value in changes.items():
+                    setattr(current_user, field, value)
+                db.session.commit()
+                flash("Profile saved.", "success")
+                return redirect(url_for("main.profile", tab="details"))
+            return render(get_user_skills(current_user, "learn"),
+                          get_user_skills(current_user, "teach"), status=400)
+
+        if section != "skills":
+            abort(400)
+
+        active_tab = "skills"
         learns = clean_selection(request.form.getlist("learns"))
         teaches = clean_selection(request.form.getlist("teaches"))
         if request.form.get("action") == "search":
             return render(learns, teaches, searching=True)
 
-        errors = [min_skills_error(learns, "to learn"), min_skills_error(teaches, "to teach")]
-        errors = [error for error in errors if error]
-        if errors:
-            for error in errors:
+        skill_errors = [min_skills_error(learns, "to learn"), min_skills_error(teaches, "to teach")]
+        skill_errors = [error for error in skill_errors if error]
+        if skill_errors:
+            for error in skill_errors:
                 flash(error, "error")
             return render(learns, teaches, status=400)  # keep both lists as submitted
 
@@ -418,7 +456,7 @@ def profile():
             return redirect(url_for("main.dashboard", mode="learner", filter="profile"))
         return redirect(url_for("main.dashboard"))
 
-    # Show the skills saved for the signed-in account.
+    # Show the details and skills saved for the signed-in account.
     return render(get_user_skills(current_user, "learn"), get_user_skills(current_user, "teach"))
 
 

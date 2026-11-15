@@ -23,6 +23,20 @@ python -m venv .venv
 
 Then open http://127.0.0.1:5001.
 
+### Upgrade an existing database
+
+Before starting an updated installation that already has a database, stop the
+server and run this from the project root after installing the requirements:
+
+```bash
+.venv/bin/python -m flask --app run upgrade-db
+```
+
+On Windows, use `.\.venv\Scripts\python.exe -m flask --app run upgrade-db`.
+The command adds the optional date-of-birth column while preserving accounts and
+profile data. `db.create_all()` does not upgrade existing tables, so run the command 
+before serving an existing database.
+
 ### Command shortcuts
 
 The Makefile supports macOS, Linux, and Windows with GNU Make installed. On macOS,

@@ -193,7 +193,7 @@ def test_profile_preselects_my_skills(authenticated_client, catalog):
         data={"teaches": ["Python", "Statistics", "Marketing"]}
     )
 
-    page = authenticated_client.get("/profile").data.decode()
+    page = authenticated_client.get("/profile?tab=skills").data.decode()
 
     assert 'value="Spanish" checked' in page
     assert 'value="Guitar" checked' in page
@@ -239,7 +239,7 @@ def test_profile_save_and_filter(authenticated_client, app, user_id, catalog):
         assert teaching_skills == {"Python", "Statistics", "Marketing"}
 
     # The profile should display the newly saved selections.
-    page = authenticated_client.get("/profile").data.decode()
+    page = authenticated_client.get("/profile?tab=skills").data.decode()
 
     assert 'value="Cooking" checked' in page
     assert 'value="Python" checked' in page
@@ -364,7 +364,7 @@ def test_users_have_separate_skill_profiles(app, client, user_id, catalog):
     assert response.status_code == 302
 
     # The second user's profile should not contain the first user's skills.
-    page = client.get("/profile").data.decode()
+    page = client.get("/profile?tab=skills").data.decode()
 
     assert 'value="Spanish" checked' not in page
     assert 'value="Python" checked' not in page
@@ -378,7 +378,7 @@ def test_users_have_separate_skill_profiles(app, client, user_id, catalog):
         }
     )
 
-    page = client.get("/profile").data.decode()
+    page = client.get("/profile?tab=skills").data.decode()
 
     assert 'value="Guitar" checked' in page
     assert 'value="Statistics" checked' in page
@@ -394,7 +394,7 @@ def test_users_have_separate_skill_profiles(app, client, user_id, catalog):
         }
     )
 
-    page = client.get("/profile").data.decode()
+    page = client.get("/profile?tab=skills").data.decode()
 
     assert 'value="Spanish" checked' in page
     assert 'value="Python" checked' in page
