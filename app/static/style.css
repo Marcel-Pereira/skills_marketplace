@@ -42,7 +42,7 @@ label.chip { cursor: pointer; }
    and "order" puts all chips first and the open panels underneath them. */
 .skill-search { order: 3; flex: 0 0 100%; display: flex; gap: 8px; margin: 8px 0; }
 .skill-search input { flex: 1; }
-.search-results { order: 4; flex: 0 0 100%; margin-bottom: 16px; }
+.search-message { order: 4; flex: 0 0 100%; margin: 0 0 8px; }
 .category-note { margin-left: 4px; font-size: 0.8em; opacity: 0.6; }
 .areas { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 24px; }
 .area { display: contents; }
@@ -53,12 +53,12 @@ label.chip { cursor: pointer; }
 .area-chip { order: 1; margin: 0; border-radius: 6px; background: #fff; }
 .area-toggle:checked + .area-chip { border-color: #222; font-weight: 600; }
 /* Order inside .areas: the grey "pick a few areas" prompt (0), area chips (1), the "pick at
-   least 3 skills" instruction (2), search (3), search results (4), then the open skill lists (5).
+   least 3 skills" instruction (2), search (3), the "no match" message (4), then the open skill lists (5).
    The skills instruction is big and dark so it can't be missed. */
 .area-hint { order: 0; flex: 0 0 100%; margin: 0 0 4px; }
 /* The skills section only shows once an area is open (or a search has results to show) */
-.areas:not(:has(.area-toggle:checked)):not(:has(.search-results)) > .pick-hint,
-.areas:not(:has(.area-toggle:checked)):not(:has(.search-results)) > .skill-search { display: none; }
+.areas:not(:has(.area-toggle:checked)):not(:has(.search-message)) > .pick-hint,
+.areas:not(:has(.area-toggle:checked)):not(:has(.search-message)) > .skill-search { display: none; }
 .pick-hint { order: 2; flex: 0 0 100%; margin: 20px 0 4px; font-size: 1.5em; color: #222; }
 .panel { display: none; order: 5; flex: 0 0 100%; border-top: 1px solid #eee; padding-top: 8px; }
 .area-toggle:checked ~ .panel { display: block; }

@@ -26,6 +26,8 @@
 
 {% macro chip_picker(name, categories, picker) %}
   <div class="chip-picker">
+    {# Tells the server this form shows which areas are open, so closed areas drop their skills #}
+    <input type="hidden" name="{{ name }}_shown" value="1">
     <div class="areas">
       <p class="muted area-hint">Pick a few areas you're interested in.</p>
       {% for category in categories %}
@@ -37,7 +39,7 @@
           <div class="panel">
             <p class="panel-title">{{ category.name }}</p>
             <div class="chips">
-              {% for skill in category.skills if skill.id not in picker.result_ids %}
+              {% for skill in category.skills %}
                 {{ skill_chip(name, skill, picker) }}
               {% endfor %}
             </div>
@@ -46,24 +48,14 @@
       {% endfor %}
       {# Under the area chips: the skills section with its instruction, search and the open skill lists (see "order" in style.css) #}
       <h2 class="pick-hint">Pick at least {{ picker.min_skills }} skills.</h2>
-      {# Search sits under the instruction, above the open skill lists #}
+      {# Search opens the areas of the matching skills (and picks the skill if only one matches) #}
       <div class="skill-search">
         <input type="search" name="{{ name }}_q" value="{{ picker.query }}" placeholder="Search skills" aria-label="Search skills">
         <button name="action" value="search" class="secondary">Search</button>
       </div>
 
-      {% if picker.query %}
-        <div class="search-results">
-          {% if picker.results %}
-            <div class="chips">
-              {% for skill, category in picker.results %}
-                <label class="chip"><input type="checkbox" name="{{ name }}" value="{{ skill.name }}" {% if skill.name in picker.selected %}checked{% endif %}>{{ skill.name }} <span class="category-note">{{ category.name }}</span></label>
-              {% endfor %}
-            </div>
-          {% else %}
-            <p class="muted">No skills match that search.</p>
-          {% endif %}
-        </div>
+      {% if picker.no_match %}
+        <p class="muted search-message">No skills match that search.</p>
       {% endif %}
 
     </div>
