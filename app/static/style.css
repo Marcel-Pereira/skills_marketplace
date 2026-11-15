@@ -48,12 +48,10 @@ label.chip { cursor: pointer; }
 .area { display: contents; }
 .area-toggle { display: none; }
 /* Areas look different from skills so nobody mistakes opening an area for picking a skill:
-   square corners, white background and a +/- sign. An open area gets a dark border and a "-",
-   but never the black fill that a picked skill gets. */
+   square corners and a white background. An open area gets a dark border and bold text,
+   but never the black fill that a picked skill (a round chip) gets. */
 .area-chip { order: 1; margin: 0; border-radius: 6px; background: #fff; }
-.area-chip::before { content: "+ "; color: #777; }
 .area-toggle:checked + .area-chip { border-color: #222; font-weight: 600; }
-.area-toggle:checked + .area-chip::before { content: "- "; color: #222; }
 .panel { display: none; order: 2; flex: 0 0 100%; border-top: 1px solid #eee; padding-top: 8px; }
 .area-toggle:checked ~ .panel { display: block; }
 .panel-title { margin: 0; font-weight: 600; }
