@@ -63,18 +63,19 @@
             <input type="hidden" name="section" value="skills">
             <section class="card profile-section" aria-labelledby="learn-skills">
               <h2 id="learn-skills">What do you want to learn?</h2>
-              {{ chip_picker("learns", options, skills.learns) }}
+              <p class="muted">Pick at least {{ min_skills }}.</p>
+              {{ chip_picker("learns", categories, pickers.learns) }}
             </section>
             <section class="card profile-section" aria-labelledby="teach-skills">
               <h2 id="teach-skills">What can you teach?</h2>
-              {{ chip_picker("teaches", options, skills.teaches) }}
+              <p class="muted">Pick at least {{ min_skills }}.</p>
+              {{ chip_picker("teaches", categories, pickers.teaches) }}
             </section>
             <div class="actions profile-actions">
               <button type="submit">Save skills</button>
               <button type="submit" name="then" value="filter" class="secondary">Save and filter by these</button>
             </div>
           </form>
-          <script src="{{ url_for('static', filename='chips.js') }}"></script>
         {% endif %}
     </div>
 {% endblock %}

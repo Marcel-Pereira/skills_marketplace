@@ -6,7 +6,7 @@ import pytest
 
 from app import db
 from app.models import User
-from app.sample_data import CURRENT_USER
+from app.routes import save_user_skills
 
 
 PROFILE_FIELDS = ("bio", "country_code", "timezone", "date_of_birth")
@@ -35,10 +35,13 @@ def saved_profile(app, user_id):
 
 
 @pytest.fixture
-def sample_skills(monkeypatch):
-    values = {"learns": ["Spanish", "Guitar"], "teaches": ["Python"]}
-    for field, value in values.items():
-        monkeypatch.setitem(CURRENT_USER, field, value.copy())
+def sample_skills(app, catalog, user_id):
+    """Save skills for the test user (skills now belong to each account, from the catalog)."""
+    values = {"learns": ["Guitar", "Piano", "Spanish"], "teaches": ["Marketing", "Python", "Statistics"]}
+    with app.app_context():
+        user = db.session.get(User, user_id)
+        save_user_skills(user, "learn", values["learns"], commit=False)
+        save_user_skills(user, "teach", values["teaches"])
     return values
 
 
@@ -102,7 +105,7 @@ def test_personal_details_are_populated_from_saved_account(
 
 
 def test_profile_save_persists_details_and_preserves_skills(
-    authenticated_client, app, user_id, sample_skills
+    authenticated_client, app, user_id, sample_skills, saved_skills
 ):
     response = authenticated_client.post(
         "/profile",
@@ -125,8 +128,8 @@ def test_profile_save_persists_details_and_preserves_skills(
         "timezone": "America/Argentina/Buenos_Aires",
         "date_of_birth": date(2000, 1, 2),
     }
-    assert CURRENT_USER["learns"] == sample_skills["learns"]
-    assert CURRENT_USER["teaches"] == sample_skills["teaches"]
+    assert saved_skills("learn") == sample_skills["learns"]
+    assert saved_skills("teach") == sample_skills["teaches"]
 
     page = authenticated_client.get(response.headers["Location"]).get_data(as_text=True)
     assert "Profile saved." in page
@@ -261,11 +264,12 @@ def test_personal_details_are_isolated_to_the_signed_in_account(
 @pytest.mark.parametrize("section", [None, "skills"])
 @pytest.mark.parametrize("filter_skills", [False, True])
 def test_skill_submissions_preserve_personal_details_and_destinations(
-    authenticated_client, app, user_id, saved_profile, sample_skills, section, filter_skills
+    authenticated_client, app, user_id, saved_profile, sample_skills, saved_skills,
+    section, filter_skills
 ):
     data = {
-        "learns": ["Cooking"],
-        "teaches": ["Design"],
+        "learns": ["Cooking", "Drawing", "Photography"],
+        "teaches": ["Chess", "Excel", "Graphic Design"],
         "bio": "Do not save this from the skills form",
         "country_code": "US",
     }
@@ -276,15 +280,15 @@ def test_skill_submissions_preserve_personal_details_and_destinations(
     response = authenticated_client.post("/profile", data=data)
 
     assert response.status_code == 302
-    expected_destination = "/dashboard?mode=learner&skill=Cooking" if filter_skills else "/dashboard"
+    expected_destination = "/dashboard?mode=learner&filter=profile" if filter_skills else "/dashboard"
     assert response.headers["Location"] == expected_destination
-    assert CURRENT_USER["learns"] == ["Cooking"]
-    assert CURRENT_USER["teaches"] == ["Design"]
+    assert saved_skills("learn") == ["Cooking", "Drawing", "Photography"]
+    assert saved_skills("teach") == ["Chess", "Excel", "Graphic Design"]
     assert profile_values(app, user_id) == saved_profile
 
 
 def test_unknown_section_does_not_save_any_profile_or_skills(
-    authenticated_client, app, user_id, saved_profile, sample_skills
+    authenticated_client, app, user_id, saved_profile, sample_skills, saved_skills
 ):
     response = authenticated_client.post(
         "/profile", data={"section": "unknown", "bio": "Unsaved", "learns": ["Cooking"]}
@@ -292,5 +296,5 @@ def test_unknown_section_does_not_save_any_profile_or_skills(
 
     assert response.status_code == 400
     assert profile_values(app, user_id) == saved_profile
-    assert CURRENT_USER["learns"] == sample_skills["learns"]
-    assert CURRENT_USER["teaches"] == sample_skills["teaches"]
+    assert saved_skills("learn") == sample_skills["learns"]
+    assert saved_skills("teach") == sample_skills["teaches"]
