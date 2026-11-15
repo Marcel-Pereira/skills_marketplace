@@ -287,38 +287,35 @@ def dashboard():
         my_skills = get_user_skills(current_user, "learn")
         their_type = "teach"
 
-    # Choose how to filter people on the Learner or Sharer dashboard.
+    # Primary filter: Everyone ("default") or My Profile ("profile"); one is always selected.
+    # Older links used filter=skill for By Skill; those now mean Everyone plus the picked skills.
     filter_mode = request.args.get("filter", "default")
-
-    if filter_mode not in ("default", "skill", "profile"):
+    if filter_mode not in ("default", "profile"):
         filter_mode = "default"
 
-    # Keep supporting the MVP's existing ?skill=... links.
-    picked = request.args.getlist("skill")
+    # Secondary filter: By Skill narrows the primary one. In My Profile, only my own
+    # skills can be picked. Clicking a chip's x removes only that skill.
+    picked = clean_selection(request.args.getlist("skill"))
+    if filter_mode == "profile":
+        picked = [skill for skill in picked if skill in my_skills]
+    removed = request.args.get("remove_skill")
+    if removed in picked:
+        picked.remove(removed)
 
-
-    if filter_mode == "skill" or (filter_mode == "default" and picked):
-        # By Skill: show people offering/requesting the selected skill.
-        # Keep compatibility with the MVP's existing ?skill=... links.
-        # Match any selected skill, not just the first one.
-        picked = clean_selection(picked)
-
-        # Clicking a chip removes only that skill.
-        removed = request.args.get("remove_skill")
-        if removed in picked:
-            picked.remove(removed)
-
-        wanted = picked
-
+    if picked:
+        wanted = picked            # people with at least one of the picked skills
     elif filter_mode == "profile":
-        # My Profile: use skills saved in the signed-in user's profile.
-        wanted = my_skills
-        picked = []
-
+        wanted = my_skills         # people matching my saved skills
     else:
-        # Default: show all active listings in the chosen direction.
-        wanted = None
-        picked = []
+        wanted = None              # everyone with an active listing
+
+    # The By Skill list: every catalog skill for Everyone, only my own skills for My Profile.
+    skill_groups = []
+    for category in get_categories():
+        names = [skill.name for skill in category.skills
+                 if filter_mode != "profile" or skill.name in my_skills]
+        if names:
+            skill_groups.append((category.name, names))
 
     # Find active listings from other users in the database.
     listings = Listing.query.filter(
@@ -375,7 +372,7 @@ def dashboard():
         mode=mode,
         filter_mode=filter_mode,
         picked=picked,
-        categories=get_categories(),
+        skill_groups=skill_groups,
         matches=matches
     )
 

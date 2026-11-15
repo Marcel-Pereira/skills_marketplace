@@ -41,22 +41,24 @@
        toggle, the picked-skill chips and "Clear all" sit in the same row as the other filters. #}
     <form method="get" class="skill-filter" onchange="this.submit()">
       <input type="hidden" name="mode" value="{{ mode }}">
-      <input type="hidden" name="filter" value="skill">
+      <input type="hidden" name="filter" value="{{ filter_mode }}">  {# keep Everyone / My Profile #}
 
       <details class="filter" {% if picked %}open{% endif %}>
         <summary>By Skill{% if picked %} ({{ picked|length }}){% endif %}</summary>
 
         <div class="dropdown">
-          {# Every catalog skill, under its category heading #}
-          {% for category in categories %}
-            <strong class="category-title">{{ category.name }}</strong>
-            {% for skill in category.skills %}
+          {# All catalog skills (Everyone) or only my skills (My Profile), under category headings #}
+          {% for category_name, skill_names in skill_groups %}
+            <strong class="category-title">{{ category_name }}</strong>
+            {% for skill in skill_names %}
               <label>
-                <input type="checkbox" name="skill" value="{{ skill.name }}"
-                       {% if skill.name in picked %}checked{% endif %}>
-                {{ skill.name }}
+                <input type="checkbox" name="skill" value="{{ skill }}"
+                       {% if skill in picked %}checked{% endif %}>
+                {{ skill }}
               </label>
             {% endfor %}
+          {% else %}
+            <p class="muted">No skills on your profile yet.</p>
           {% endfor %}
         </div>
       </details>
@@ -69,7 +71,7 @@
       {% endfor %}
 
       {% if picked %}
-        <a href="{{ url_for('main.dashboard', mode=mode, filter='default') }}">
+        <a href="{{ url_for('main.dashboard', mode=mode, filter=filter_mode) }}">
           Clear all
         </a>
       {% endif %}
