@@ -29,7 +29,7 @@ def test_area_with_a_selected_skill_starts_open_and_others_closed(app, authentic
     assert f'name="learns_areas" value="{closed_id}" checked' not in page
 
 
-def test_search_shows_matching_skills_above_the_areas(authenticated_client, catalog):
+def test_search_shows_matching_skills_below_the_area_chips(authenticated_client, catalog):
     response = authenticated_client.post(
         "/onboarding/learn", data={"action": "search", "learns_q": "SPAN", "learns": ["Guitar"]}
     )
@@ -37,7 +37,8 @@ def test_search_shows_matching_skills_above_the_areas(authenticated_client, cata
 
     assert response.status_code == 200
     assert 'class="search-results"' in page
-    assert page.index('class="search-results"') < page.index('class="areas"')
+    # Interests (area chips) come first, then the skills section: instruction, search, results
+    assert page.index('class="chip area-chip"') < page.index('class="pick-hint"') < page.index('class="search-results"')
     assert page.count('value="Spanish"') == 1  # in the results only, not again in its area
     assert 'value="Guitar" checked' in page  # earlier picks survive the search
     assert 'value="Guitar"' in page and "No skills match" not in page
