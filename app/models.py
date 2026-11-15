@@ -52,7 +52,7 @@ class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False, unique=True)
 
-    skills = db.relationship("Skill", back_populates="category")
+    skills = db.relationship("Skill", back_populates="category", order_by="Skill.name")
 
 
 # Skill table, each skill belongs to a category and can have many listings

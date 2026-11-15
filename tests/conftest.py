@@ -2,6 +2,8 @@ import pytest
 
 from app import create_app, db
 from app.models import User
+from app.sample_data import CURRENT_USER
+from app.seed import seed_skills
 
 
 @pytest.fixture
@@ -11,6 +13,21 @@ def app():
     with app.app_context():
         db.session.remove()
         db.drop_all()
+
+
+@pytest.fixture
+def catalog(app):
+    """Load the fixed categories and skills. The test database starts empty, and the skill
+    pickers (and the check that drops unknown skills) need the catalog to be there."""
+    with app.app_context():
+        seed_skills()
+
+
+@pytest.fixture
+def current_user_skills(monkeypatch):
+    """The sample user's skills live in a module-level dict. Put them back after the test."""
+    monkeypatch.setitem(CURRENT_USER, "learns", list(CURRENT_USER["learns"]))
+    monkeypatch.setitem(CURRENT_USER, "teaches", list(CURRENT_USER["teaches"]))
 
 
 @pytest.fixture

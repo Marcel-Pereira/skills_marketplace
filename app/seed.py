@@ -1,6 +1,6 @@
 """Fixed list of categories and skills. Users can only choose from these.
 
-Run with `flask --app app seed`. Safe to run many times: it only adds what is missing.
+Run with `flask --app __init__.py seed`. Safe to run many times: it only adds what is missing.
 To add a skill or category, edit CATALOG below and run the command again.
 Skill names must be unique within a category (the same name may appear in two categories).
 """
