@@ -3,7 +3,7 @@ import pytest
 from app.sample_data import PEOPLE
 
 @pytest.fixture
-def matching_data(app, authenticated_client, user_id):
+def matching_data(app, catalog, authenticated_client, user_id):
     """Create real database users and listings for dashboard tests."""
 
     from app import db
@@ -13,8 +13,9 @@ def matching_data(app, authenticated_client, user_id):
     authenticated_client.post(
         "/profile",
         data={
-            "learns": ["Spanish", "Guitar", "Design"],
-            "teaches": ["Python", "Statistics"],
+            "learns": ["Spanish", "Guitar", "Graphic Design"],
+            # Chess makes the required 3; none of the example people want to learn it.
+            "teaches": ["Python", "Statistics", "Chess"],
         },
     )
 
@@ -34,12 +35,8 @@ def matching_data(app, authenticated_client, user_id):
                 ("learn", "learns"),
             ]:
                 for skill_name in person[field]:
+                    # Every example skill is in the catalog loaded by the catalog fixture.
                     skill = Skill.query.filter_by(name=skill_name).first()
-
-                    if skill is None:
-                        skill = Skill(name=skill_name)
-                        db.session.add(skill)
-                        db.session.flush()
 
                     db.session.add(
                         Listing(
@@ -64,16 +61,16 @@ def test_protected_screens_load(authenticated_client, path):
     assert authenticated_client.get(path).status_code == 200
 
 
-def test_signup_flow_goes_through_onboarding_to_dashboard(client, user_data):
+def test_signup_flow_goes_through_onboarding_to_dashboard(client, catalog, user_data):
     signup = client.post("/signup", data=user_data)
     assert signup.status_code == 302
     assert signup.headers["Location"] == "/onboarding/learn"
 
-    learn = client.post("/onboarding/learn", data={"learns": ["Spanish", "Guitar"]})
+    learn = client.post("/onboarding/learn", data={"learns": ["Spanish", "Guitar", "Cooking"]})
     assert learn.status_code == 302
     assert learn.headers["Location"] == "/onboarding/teach"
 
-    teach = client.post("/onboarding/teach", data={"teaches": ["Python"]})
+    teach = client.post("/onboarding/teach", data={"teaches": ["Python", "Statistics", "Marketing"]})
     assert teach.status_code == 302
     assert teach.headers["Location"] == "/dashboard"
     assert client.get("/dashboard").status_code == 200
@@ -130,7 +127,7 @@ def test_single_skill_filter_shows_only_relevant_people(
 
     # Selecting Design should show Jiwoo instead of Mateo.
     design_page = authenticated_client.get(
-        "/dashboard?mode=learner&filter=skill&skill=Design"
+        "/dashboard?mode=learner&filter=skill&skill=Graphic+Design"
     ).data
 
     assert b"Jiwoo" in design_page
@@ -153,7 +150,7 @@ def test_sharer_skill_filter_shows_people_who_want_to_learn_it(
     assert b"Linh" in spanish_page
     assert b"Mateo" not in spanish_page
 
-def test_skill_filter_shows_selected_skills(authenticated_client):
+def test_skill_filter_shows_selected_skills(authenticated_client, catalog):
     """The By Skill filter should keep selected skills checked."""
 
     # Open the dashboard with Spanish selected.
@@ -182,18 +179,18 @@ def test_logo_links_to_dashboard_when_signed_in(client):
     assert b'<a class="brand" href="/">Skills Marketplace</a>' in client.get("/signin").data
 
 
-def test_profile_preselects_my_skills(authenticated_client):
+def test_profile_preselects_my_skills(authenticated_client, catalog):
     """The profile shows skills saved for the signed-in user."""
 
     # Save skills through onboarding.
     authenticated_client.post(
         "/onboarding/learn",
-        data={"learns": ["Spanish", "Guitar"]}
+        data={"learns": ["Spanish", "Guitar", "Cooking"]}
     )
 
     authenticated_client.post(
         "/onboarding/teach",
-        data={"teaches": ["Python"]}
+        data={"teaches": ["Python", "Statistics", "Marketing"]}
     )
 
     page = authenticated_client.get("/profile").data.decode()
@@ -204,7 +201,7 @@ def test_profile_preselects_my_skills(authenticated_client):
     assert 'value="JavaScript" checked' not in page
 
 
-def test_profile_save_and_filter(authenticated_client, app, user_id):
+def test_profile_save_and_filter(authenticated_client, app, user_id, catalog):
     """Profile changes are saved in the database and used for filtering."""
 
     from app.models import Listing
@@ -213,8 +210,8 @@ def test_profile_save_and_filter(authenticated_client, app, user_id):
     response = authenticated_client.post(
         "/profile",
         data={
-            "learns": ["Cooking"],
-            "teaches": ["Python"],
+            "learns": ["Cooking", "Piano", "Photography"],
+            "teaches": ["Python", "Statistics", "Marketing"],
             "then": "filter",
         }
     )
@@ -238,8 +235,8 @@ def test_profile_save_and_filter(authenticated_client, app, user_id):
             if listing.type == "teach"
         }
 
-        assert learning_skills == {"Cooking"}
-        assert teaching_skills == {"Python"}
+        assert learning_skills == {"Cooking", "Piano", "Photography"}
+        assert teaching_skills == {"Python", "Statistics", "Marketing"}
 
     # The profile should display the newly saved selections.
     page = authenticated_client.get("/profile").data.decode()
@@ -276,7 +273,7 @@ def test_logo_links_to_dashboard_when_signed_in(authenticated_client):
 def test_logo_links_home_on_login_page(client):
     assert b'<a class="brand" href="/">Skills Marketplace</a>' in client.get("/login").data
 
-def test_onboarding_saves_skills_to_database(authenticated_client, app, user_id):
+def test_onboarding_saves_skills_to_database(authenticated_client, app, user_id, catalog):
     """Check that onboarding saves learning and teaching skills for the user."""
 
     from app.models import Listing
@@ -284,7 +281,7 @@ def test_onboarding_saves_skills_to_database(authenticated_client, app, user_id)
     # Save the skills the user wants to learn.
     response = authenticated_client.post(
         "/onboarding/learn",
-        data={"learns": ["Spanish", "Guitar"]}
+        data={"learns": ["Spanish", "Guitar", "Cooking"]}
     )
 
     assert response.status_code == 302
@@ -293,7 +290,7 @@ def test_onboarding_saves_skills_to_database(authenticated_client, app, user_id)
     # Save the skills the user can teach.
     response = authenticated_client.post(
         "/onboarding/teach",
-        data={"teaches": ["Python", "Statistics"]}
+        data={"teaches": ["Python", "Statistics", "Marketing"]}
     )
 
     assert response.status_code == 302
@@ -315,10 +312,10 @@ def test_onboarding_saves_skills_to_database(authenticated_client, app, user_id)
             if listing.type == "teach"
         }
 
-        assert learning_skills == {"Spanish", "Guitar"}
-        assert teaching_skills == {"Python", "Statistics"}
+        assert learning_skills == {"Spanish", "Guitar", "Cooking"}
+        assert teaching_skills == {"Python", "Statistics", "Marketing"}
 
-def test_users_have_separate_skill_profiles(app, client, user_id):
+def test_users_have_separate_skill_profiles(app, client, user_id, catalog):
     """Changing one user's skills must not change another user's profile."""
 
     from app import db
@@ -337,8 +334,8 @@ def test_users_have_separate_skill_profiles(app, client, user_id):
     client.post(
         "/profile",
         data={
-            "learns": ["Spanish"],
-            "teaches": ["Python"]
+            "learns": ["Spanish", "French", "German"],
+            "teaches": ["Python", "Java", "SQL"]
         }
     )
 
@@ -376,8 +373,8 @@ def test_users_have_separate_skill_profiles(app, client, user_id):
     client.post(
         "/profile",
         data={
-            "learns": ["Guitar"],
-            "teaches": ["Statistics"]
+            "learns": ["Guitar", "Piano", "Drawing"],
+            "teaches": ["Statistics", "Calculus", "Chess"]
         }
     )
 
@@ -403,7 +400,7 @@ def test_users_have_separate_skill_profiles(app, client, user_id):
     assert 'value="Python" checked' in page
     assert 'value="Guitar" checked' not in page
 
-def test_dashboard_matches_real_users(app, authenticated_client, user_id):
+def test_dashboard_matches_real_users(app, authenticated_client, user_id, catalog):
     """Show matching database users, not unrelated sample people."""
 
     from app import db
@@ -426,12 +423,9 @@ def test_dashboard_matches_real_users(app, authenticated_client, user_id):
         db.session.add_all([teacher, unrelated])
         db.session.flush()
 
-        # Create the skills they teach.
-        spanish = Skill(name="Spanish")
-        java = Skill(name="Java")
-
-        db.session.add_all([spanish, java])
-        db.session.flush()
+        # The skills they teach come from the catalog.
+        spanish = Skill.query.filter_by(name="Spanish").first()
+        java = Skill.query.filter_by(name="Java").first()
 
         db.session.add_all([
             Listing(
@@ -448,10 +442,11 @@ def test_dashboard_matches_real_users(app, authenticated_client, user_id):
 
         db.session.commit()
 
-    # The signed-in user wants to learn Spanish.
+    # The signed-in user wants to learn Spanish (plus two skills nobody here teaches).
     authenticated_client.post(
         "/profile",
-        data={"learns": ["Spanish"]}
+        data={"learns": ["Spanish", "French", "German"],
+              "teaches": ["Python", "Statistics", "Marketing"]}
     )
 
     # Check the Learner dashboard using personalized matching.
@@ -486,7 +481,7 @@ def test_single_skill_filter_matches_correct_people(
 
     # Switching to Design should show Jiwoo instead.
     page = authenticated_client.get(
-        "/dashboard?mode=learner&filter=skill&skill=Design"
+        "/dashboard?mode=learner&filter=skill&skill=Graphic+Design"
     ).data
 
     assert b"Jiwoo" in page
@@ -565,17 +560,18 @@ def test_inactive_skill_listing_is_not_a_match(
 
 
 def test_empty_profile_shows_no_matches(
-    authenticated_client, matching_data
+    app, authenticated_client, matching_data, user_id
 ):
     """A user with no saved skills should have no personalized matches."""
 
-    # Remove all learning and teaching skills from the current profile.
-    response = authenticated_client.post(
-        "/profile",
-        data={"learns": [], "teaches": []}
-    )
+    from app import db
+    from app.models import Listing
 
-    assert response.status_code == 302
+    # The profile page refuses fewer than 3 skills, so an empty profile is
+    # set up by removing the user's saved skills directly.
+    with app.app_context():
+        Listing.query.filter_by(user_id=user_id).delete()
+        db.session.commit()
 
     # Neither Learner nor Sharer should show unrelated people.
     for mode in ("learner", "sharer"):
@@ -609,14 +605,14 @@ def test_default_and_profile_have_distinct_results(
 
     assert b"Mateo" in profile_page
     assert b"Jiwoo" in profile_page
-    assert b"Wei" not in profile_page
+    assert b"<h3>Wei</h3>" not in profile_page  # plain "Wei" also matches "Weightlifting"
     assert b"Sam" not in profile_page
 
 
 def test_multiple_skill_filters(authenticated_client, matching_data):
     """Show people matching at least one selected skill."""
     page = authenticated_client.get(
-        "/dashboard?mode=learner&filter=skill&skill=Spanish&skill=Design"
+        "/dashboard?mode=learner&filter=skill&skill=Spanish&skill=Graphic+Design"
     ).data
 
     assert b"Mateo" in page
@@ -627,33 +623,35 @@ def test_multiple_skill_filters(authenticated_client, matching_data):
 def test_removing_one_skill_keeps_other_filters(
     authenticated_client, matching_data
 ):
-    """Removing Spanish should keep Design selected."""
+    """Removing Spanish should keep Graphic Design selected."""
     page = authenticated_client.get(
         "/dashboard?mode=learner&filter=skill"
-        "&skill=Spanish&skill=Design&remove_skill=Spanish"
+        "&skill=Spanish&skill=Graphic+Design&remove_skill=Spanish"
     ).data
 
     assert b"Jiwoo" in page
     assert b"Mateo" not in page
-    assert b'value="Design"' in page
+    assert b'value="Graphic Design"' in page
     assert b"checked" in page
 
 
 def test_profile_save_preserves_listing_details(
-    authenticated_client, app, user_id
+    authenticated_client, app, user_id, catalog
 ):
     """Saving unchanged skills must preserve listing details and IDs."""
     from app import db
-    from app.models import Listing
+    from app.models import Listing, Skill
 
     authenticated_client.post(
         "/profile",
-        data={"learns": ["Spanish"], "teaches": ["Python"]}
+        data={"learns": ["Spanish", "Guitar", "Cooking"],
+              "teaches": ["Python", "Statistics", "Marketing"]}
     )
 
     with app.app_context():
+        spanish = Skill.query.filter_by(name="Spanish").first()
         listing = Listing.query.filter_by(
-            user_id=user_id, type="learn"
+            user_id=user_id, type="learn", skill_id=spanish.id
         ).first()
 
         original_id = listing.id
@@ -663,12 +661,14 @@ def test_profile_save_preserves_listing_details(
 
     authenticated_client.post(
         "/profile",
-        data={"learns": ["Spanish"], "teaches": ["Python"]}
+        data={"learns": ["Spanish", "Guitar", "Cooking"],
+              "teaches": ["Python", "Statistics", "Marketing"]}
     )
 
     with app.app_context():
+        spanish = Skill.query.filter_by(name="Spanish").first()
         listing = Listing.query.filter_by(
-            user_id=user_id, type="learn"
+            user_id=user_id, type="learn", skill_id=spanish.id
         ).first()
 
         assert listing.id == original_id

@@ -45,12 +45,16 @@
         <summary>By Skill{% if picked %} ({{ picked|length }}){% endif %}</summary>
 
         <div class="dropdown">
-          {% for skill in skills %}
-            <label>
-              <input type="checkbox" name="skill" value="{{ skill }}"
-                     {% if skill in picked %}checked{% endif %}>
-              {{ skill }}
-            </label>
+          {# Every catalog skill, under its category heading #}
+          {% for category in categories %}
+            <strong class="category-title">{{ category.name }}</strong>
+            {% for skill in category.skills %}
+              <label>
+                <input type="checkbox" name="skill" value="{{ skill.name }}"
+                       {% if skill.name in picked %}checked{% endif %}>
+                {{ skill.name }}
+              </label>
+            {% endfor %}
           {% endfor %}
           <button type="submit">Apply</button>
         </div>

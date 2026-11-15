@@ -1,7 +1,8 @@
 import pytest
 
 from app import create_app, db
-from app.models import User
+from app.models import Listing, User
+from app.seed import seed_skills
 
 
 @pytest.fixture
@@ -11,6 +12,24 @@ def app():
     with app.app_context():
         db.session.remove()
         db.drop_all()
+
+
+@pytest.fixture
+def catalog(app):
+    """Load the fixed categories and skills. The test database starts empty, and the skill
+    pickers (and the check that drops unknown skills) need the catalog to be there."""
+    with app.app_context():
+        seed_skills()
+
+
+@pytest.fixture
+def saved_skills(app, user_id):
+    """Read what the signed-in test user has saved: saved_skills("learn") gives skill names."""
+    def read(listing_type):
+        with app.app_context():
+            listings = Listing.query.filter_by(user_id=user_id, type=listing_type).all()
+            return sorted(listing.skill.name for listing in listings)
+    return read
 
 
 @pytest.fixture
