@@ -1,7 +1,6 @@
 """Onboarding and the profile need at least 3 skills per list, checked on the server (issue #18)."""
 import pytest
 
-from app.sample_data import CURRENT_USER
 
 STEPS = [
     # path, form field, where a valid POST goes next
@@ -57,8 +56,8 @@ def test_onboarding_says_pick_at_least_3(authenticated_client, catalog):
     assert "Pick as many as you like." not in page
 
 
-def test_profile_with_too_few_in_one_list_saves_nothing(authenticated_client, catalog, current_user_skills):
-    before = {"learns": list(CURRENT_USER["learns"]), "teaches": list(CURRENT_USER["teaches"])}
+def test_profile_with_too_few_in_one_list_saves_nothing(authenticated_client, catalog, saved_skills):
+    before = {"learns": saved_skills("learn"), "teaches": saved_skills("teach")}
 
     response = authenticated_client.post(
         "/profile",
@@ -71,11 +70,11 @@ def test_profile_with_too_few_in_one_list_saves_nothing(authenticated_client, ca
     assert "to learn (you picked" not in page  # the learn list was fine
     # the valid learn list is not lost, and nothing was saved
     assert 'value="Cooking" checked' in page
-    assert CURRENT_USER["learns"] == before["learns"]
-    assert CURRENT_USER["teaches"] == before["teaches"]
+    assert saved_skills("learn") == before["learns"]
+    assert saved_skills("teach") == before["teaches"]
 
 
-def test_profile_save_and_filter_is_refused_with_too_few(authenticated_client, catalog, current_user_skills):
+def test_profile_save_and_filter_is_refused_with_too_few(authenticated_client, catalog):
     response = authenticated_client.post(
         "/profile", data={"learns": ["Cooking"], "teaches": ["Python"], "then": "filter"}
     )

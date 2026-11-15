@@ -1,7 +1,6 @@
 """The areas-first picker and its search (issue #18). It works without JavaScript:
 the area chips are labels for hidden checkboxes and the search is a normal form POST."""
 from app.models import Category, Skill
-from app.sample_data import CURRENT_USER
 
 
 def category_id_of(app, skill_name):
@@ -18,8 +17,10 @@ def test_every_category_gets_an_area_chip_and_the_skills_are_not_headings(authen
 
 
 def test_area_with_a_selected_skill_starts_open_and_others_closed(app, authenticated_client, catalog):
+    learns = ["Spanish", "Guitar", "Cooking"]
+    authenticated_client.post("/profile", data={"learns": learns, "teaches": ["Python", "Statistics", "Marketing"]})
     page = authenticated_client.get("/profile").data.decode()
-    open_ids = {category_id_of(app, name) for name in CURRENT_USER["learns"]}
+    open_ids = {category_id_of(app, name) for name in learns}
     with app.app_context():
         closed_id = Category.query.filter(~Category.id.in_(open_ids)).first().id
 
@@ -70,7 +71,7 @@ def test_search_keeps_open_areas_open(app, authenticated_client, catalog):
     assert f'name="learns_areas" value="{cid}" checked' in page
 
 
-def test_profile_search_keeps_the_other_list_and_searches_both_boxes(authenticated_client, catalog, current_user_skills):
+def test_profile_search_keeps_the_other_list_and_searches_both_boxes(authenticated_client, catalog):
     response = authenticated_client.post(
         "/profile",
         data={"action": "search", "learns": ["Cooking", "Piano", "Spanish"],

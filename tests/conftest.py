@@ -1,8 +1,7 @@
 import pytest
 
 from app import create_app, db
-from app.models import User
-from app.sample_data import CURRENT_USER
+from app.models import Listing, User
 from app.seed import seed_skills
 
 
@@ -24,10 +23,13 @@ def catalog(app):
 
 
 @pytest.fixture
-def current_user_skills(monkeypatch):
-    """The sample user's skills live in a module-level dict. Put them back after the test."""
-    monkeypatch.setitem(CURRENT_USER, "learns", list(CURRENT_USER["learns"]))
-    monkeypatch.setitem(CURRENT_USER, "teaches", list(CURRENT_USER["teaches"]))
+def saved_skills(app, user_id):
+    """Read what the signed-in test user has saved: saved_skills("learn") gives skill names."""
+    def read(listing_type):
+        with app.app_context():
+            listings = Listing.query.filter_by(user_id=user_id, type=listing_type).all()
+            return sorted(listing.skill.name for listing in listings)
+    return read
 
 
 @pytest.fixture
