@@ -45,13 +45,29 @@ def load_user(user_id):
         return None
 
 
-# Skill table, has info about possible skills that users can teach or learn. Each skill can have multiple listings.
-class Skill(db.Model):
-    __tablename__ = "skills"
+# Category table, each category can have many skills
+class Category(db.Model):
+    __tablename__ = "categories"
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False, unique=True)
+    name = db.Column(db.String(50), nullable=False, unique=True)
 
+    skills = db.relationship("Skill", back_populates="category")
+
+
+# Skill table, each skill belongs to a category and can have many listings
+class Skill(db.Model):
+    __tablename__ = "skills"
+    __table_args__ = (
+        db.UniqueConstraint("category_id", "name", name="uq_skill_category_name"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey("categories.id"),
+                            nullable=False, index=True)
+
+    category = db.relationship("Category", back_populates="skills")
     listings = db.relationship("Listing", back_populates="skill")
 
 

@@ -22,6 +22,15 @@ def create_app(test_config=None):
     app.register_blueprint(main)
 
     from app import models
+    from app.seed import seed_skills
+
+    # Seed the database with fixed categories and skills when the app is first created.
+    # Run with 'flask --app app seed'
+    @app.cli.command("seed")
+    def seed_command():
+        """Load the fixed categories and skills."""
+        seed_skills()
+        print("Seeded categories and skills.")
 
     with app.app_context():
         db.create_all()
