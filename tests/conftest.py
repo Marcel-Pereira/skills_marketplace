@@ -43,6 +43,7 @@ def user_data():
         "email": "test@example.com",
         "username": "test-user",
         "password": "secret-password",
+        "confirm_password": "secret-password",
     }
 
 

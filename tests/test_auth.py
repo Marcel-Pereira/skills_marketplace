@@ -22,6 +22,7 @@ def test_signup_uses_account_fields_hashes_password_and_logs_user_in(client, app
             "email": " Learner@Example.com ",
             "username": " learner ",
             "password": "secret-password",
+            "confirm_password": "secret-password",
             **profile_fields,
         },
         follow_redirects=True,
@@ -95,7 +96,6 @@ def test_user_can_log_out_and_log_back_in(authenticated_client, user_id, user_da
     {"username": "test-user", "password": "wrong-password"},
     {"username": "TEST-USER", "password": "secret-password"},
     {"email": "test@example.com", "password": "secret-password"},
-    {"username": "test@example.com", "password": "secret-password"},
     {"username": "", "password": "secret-password"},
     {"username": "test-user", "password": ""},
 ])
@@ -103,7 +103,7 @@ def test_login_rejects_invalid_credentials(client, user_id, credentials):
     response = client.post("/login", data=credentials)
 
     assert response.status_code == 401
-    assert b"Invalid username or password." in response.data
+    assert b"Invalid email/username or password." in response.data
     with client.session_transaction() as session:
         assert "_user_id" not in session
 
@@ -116,7 +116,7 @@ def test_login_error_stays_inside_form_and_clears_on_fresh_get(client, user_id, 
 
     assert response.status_code == 401
     page = response.get_data(as_text=True)
-    message = "Invalid username or password."
+    message = "Invalid email/username or password."
     assert page.count(message) == 1
     assert 'class="flash' not in page
 
@@ -166,6 +166,7 @@ def test_signup_rejects_duplicate_accounts(client, app, user_id, user_data, dupl
         "email": "another@example.com",
         "username": "another-user",
         "password": "another-password",
+        "confirm_password": "another-password",
     }
     data[duplicate_field] = user_data[duplicate_field]
 
@@ -200,6 +201,7 @@ def test_login_and_signup_preserve_existing_profile_data(client, app, user_id, u
             "username": "new-user",
             "email": "new@example.com",
             "password": "new-password",
+            "confirm_password": "new-password",
         },
     )
     assert signup.status_code == 302
@@ -209,3 +211,32 @@ def test_login_and_signup_preserve_existing_profile_data(client, app, user_id, u
         assert user.bio == "Learning Flask"
         assert user.country_code == "AR"
         assert user.timezone == "America/Argentina/Buenos_Aires"
+
+
+@pytest.mark.parametrize("login_name", ["test@example.com", " Test@Example.com "])
+def test_login_accepts_email_instead_of_username(client, user_id, login_name):
+    response = client.post("/login", data={"username": login_name, "password": "secret-password"})
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/dashboard"
+    with client.session_transaction() as session:
+        assert session["_user_id"] == str(user_id)
+
+
+def test_signup_rejects_passwords_that_do_not_match(client, app):
+    response = client.post(
+        "/signup",
+        data={
+            "email": "learner@example.com",
+            "username": "learner",
+            "password": "secret-password",
+            "confirm_password": "secret-pasword",
+        },
+    )
+
+    assert response.status_code == 400
+    assert b"Passwords do not match." in response.data
+    with app.app_context():
+        assert db.session.execute(db.select(User)).scalars().all() == []
+    with client.session_transaction() as session:
+        assert "_user_id" not in session
