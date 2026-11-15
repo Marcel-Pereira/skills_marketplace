@@ -52,7 +52,7 @@ def test_unknown_skills_do_not_count(authenticated_client, catalog, path, field,
 
 def test_onboarding_says_pick_at_least_3(authenticated_client, catalog):
     page = authenticated_client.get("/onboarding/learn").data.decode()
-    assert "Pick at least 3 skills." in page
+    assert "then pick at least 3." in page
     assert "Pick as many as you like." not in page
 
 

@@ -93,8 +93,7 @@ def test_search_button_comes_before_the_submit_button_so_enter_searches(authenti
 
 
 def test_picker_explains_that_areas_are_not_picks(authenticated_client, catalog):
-    """Areas only open a list of skills; the page says so, so people don't stop after picking areas."""
+    """Areas only open a list of skills; the page says so, so people don't stop after opening areas."""
     page = authenticated_client.get("/onboarding/learn").data.decode()
 
-    assert "Pick at least 3 skills." in page
-    assert "Areas don't count as picks." in page
+    assert "Open a few areas to browse their skills, then pick at least 3." in page
