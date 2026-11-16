@@ -63,12 +63,10 @@
             <input type="hidden" name="section" value="skills">
             <section class="card profile-section" aria-labelledby="learn-skills">
               <h2 id="learn-skills">What do you want to learn?</h2>
-              <p class="muted">Pick at least {{ min_skills }}.</p>
               {{ chip_picker("learns", categories, pickers.learns) }}
             </section>
             <section class="card profile-section" aria-labelledby="teach-skills">
               <h2 id="teach-skills">What can you teach?</h2>
-              <p class="muted">Pick at least {{ min_skills }}.</p>
               {{ chip_picker("teaches", categories, pickers.teaches) }}
             </section>
             <div class="actions profile-actions">

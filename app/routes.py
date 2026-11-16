@@ -191,6 +191,18 @@ def clean_selection(names):
     return list(dict.fromkeys(only_catalog_skills(names)))
 
 
+def picked_skills(field, categories):
+    """The skills picked in one picker. Closing an area deselects its skills: the picker sends
+    {field}_shown together with the open areas, so skills in closed areas are dropped.
+    (A form without {field}_shown, like a hand-made request, keeps every catalog skill sent.)"""
+    chosen = clean_selection(request.form.getlist(field))
+    if request.form.get(f"{field}_shown"):
+        open_ids = set(request.form.getlist(f"{field}_areas"))
+        area_of = {skill.name: str(category.id) for category in categories for skill in category.skills}
+        chosen = [name for name in chosen if area_of.get(name) in open_ids]
+    return chosen
+
+
 def min_skills_error(skills, purpose):
     """Error message when fewer than MIN_SKILLS were picked, otherwise None.
     purpose finishes the sentence, e.g. "to learn" or "to teach"."""
@@ -217,12 +229,20 @@ def picker_state(field, selected, categories, form=None, searching=False):
     user pressed Search; on any other submit it is ignored."""
     query = form.get(f"{field}_q", "").strip() if form is not None and searching else ""
     results = search_skills(categories, query)
+    open_areas = form.getlist(f"{field}_areas") if form is not None else []
+
+    # Search opens the area of every matching skill, so the matches show up in their areas.
+    # When exactly one skill matches (e.g. "yoga"), it is picked too.
+    open_areas = open_areas + [str(category.id) for _, category in results]
+    if len(results) == 1 and results[0][0].name not in selected:
+        selected = selected + [results[0][0].name]
+
     return {
         "selected": selected,
-        "open_areas": form.getlist(f"{field}_areas") if form is not None else [],
+        "open_areas": open_areas,
         "query": query,
-        "results": results,
-        "result_ids": {skill.id for skill, _ in results},
+        "no_match": bool(query) and not results,
+        "min_skills": MIN_SKILLS,
     }
 
 # --- Onboarding ---
@@ -243,7 +263,7 @@ def onboarding_step(step, question, field, purpose, next_endpoint):
                                min_skills=MIN_SKILLS), status
 
     if request.method == "POST":
-        chosen = clean_selection(request.form.getlist(field))
+        chosen = picked_skills(field, categories)
         if request.form.get("action") == "search":
             return render(chosen, searching=True)
         error = min_skills_error(chosen, purpose)
@@ -427,8 +447,8 @@ def profile():
             abort(400)
 
         active_tab = "skills"
-        learns = clean_selection(request.form.getlist("learns"))
-        teaches = clean_selection(request.form.getlist("teaches"))
+        learns = picked_skills("learns", categories)
+        teaches = picked_skills("teaches", categories)
         if request.form.get("action") == "search":
             return render(learns, teaches, searching=True)
 
