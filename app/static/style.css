@@ -61,6 +61,8 @@ label.chip { cursor: pointer; }
 /* Dashboard */
 .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 24px 0; }  /* toggle + picked chips on one line */
 .filter { position: relative; }
+.skill-filter { display: contents; }  /* its toggle and chips join the .filter-row line */
+.remove-chip { color: #222; font: inherit; cursor: pointer; }  /* a picked skill: click it to remove it */
 .filter summary { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; list-style: none; }
 .filter summary::-webkit-details-marker { display: none; }  /* hide Safari's default triangle */
 .filter[open] summary { border-color: #222; }
