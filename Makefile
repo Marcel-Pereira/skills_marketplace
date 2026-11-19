@@ -6,7 +6,7 @@ PYTHON := .venv/bin/python
 BOOTSTRAP_PYTHON := python3
 endif
 
-.PHONY: dev setup test
+.PHONY: dev setup seed test
 
 dev:
 	"$(PYTHON)" run.py
@@ -14,6 +14,9 @@ dev:
 setup:
 	$(BOOTSTRAP_PYTHON) -m venv .venv
 	"$(PYTHON)" -m pip install -r requirements.txt
+
+seed:
+	"$(PYTHON)" -m flask --app app seed
 
 test:
 	"$(PYTHON)" -m pytest

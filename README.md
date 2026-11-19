@@ -10,6 +10,7 @@ Use Python 3.12. On macOS/Linux:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+python -m flask --app app seed
 python run.py
 ```
 
@@ -18,10 +19,23 @@ On Windows (PowerShell), you can run the virtual environment's Python directly:
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m flask --app app seed
 .\.venv\Scripts\python.exe run.py
 ```
 
 Then open http://127.0.0.1:5001.
+
+### Load the skill catalog
+
+Run the seed command before using a fresh installation. It loads the fixed
+categories and skills used by onboarding, profiles and dashboard filters.
+Running it again adds any missing catalog entries and keeps existing accounts
+and saved choices.
+
+For an old development database created before skill categories were added,
+stop the app and move the SQLite file (by default `instance/skills.db`) to a
+backup location. Run the seed command to create a fresh test database.
+For databases that already have skill categories, follow the upgrade steps below.
 
 ### Upgrade an existing database
 
@@ -50,6 +64,7 @@ The Makefile selects `.venv/bin/python` on macOS/Linux and
 
 ```bash
 make setup  # create the virtual environment and install dependencies
+make seed   # load the fixed skill categories and skills
 make dev    # start the app on port 5001 with hot reload
 make test   # run tests
 ```
