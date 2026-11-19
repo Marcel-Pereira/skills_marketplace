@@ -704,3 +704,71 @@ def test_by_skill_narrows_my_profile_and_keeps_it_selected(authenticated_client,
     assert 'name="filter" value="profile"' in page
     # My Profile stays the highlighted (dark) button while a skill is picked
     assert re.search(r'class="button"\s+href="/dashboard\?mode=learner&amp;filter=profile"', page)
+
+
+@pytest.mark.parametrize("listing_type", ["learn", "teach"])
+@pytest.mark.parametrize("screen", ["profile", "onboarding"])
+def test_removed_skills_restore_details_without_changing_other_listings(
+    app, authenticated_client, user_id, user_data, catalog, listing_type, screen
+):
+    from app import db
+    from app.models import Listing, Skill, User
+
+    choices = {"learns": ["Spanish", "Guitar", "Cooking"],
+               "teaches": ["Spanish", "Python", "Chess"]}
+    assert authenticated_client.post("/profile", data=choices).status_code == 302
+    field = {"learn": "learns", "teach": "teaches"}[listing_type]
+    path = "/profile" if screen == "profile" else f"/onboarding/{listing_type}"
+    other_type = "teach" if listing_type == "learn" else "learn"
+
+    with app.app_context():
+        spanish = Skill.query.filter_by(name="Spanish").one()
+        listing = Listing.query.filter_by(
+            user_id=user_id, type=listing_type, skill_id=spanish.id
+        ).one()
+        listing.level = "advanced"
+        listing.description = "Keep my conversation lesson details."
+        other_person = User(username="skill-observer", email="observer@example.test")
+        other_person.set_password("observer-password")
+        db.session.add(other_person)
+        db.session.flush()
+        other_listing = Listing(user_id=other_person.id, skill_id=spanish.id,
+                                type=listing_type, description="Another person's details")
+        db.session.add(other_listing)
+        db.session.commit()
+        original_id = listing.id
+        created_at = listing.created_at
+        other_listing_id = other_listing.id
+        opposite_id = Listing.query.filter_by(
+            user_id=user_id, type=other_type, skill_id=spanish.id
+        ).one().id
+
+    observer = app.test_client()
+    assert observer.post("/login", data={
+        "username": "skill-observer", "password": "observer-password"
+    }).status_code == 302
+    mode = "learner" if listing_type == "teach" else "sharer"
+    dashboard = f"/dashboard?mode={mode}&filter=default&skill=Spanish"
+    account_card = f"<h3>{user_data['username']}</h3>"
+
+    for selected in (["Piano", *choices[field][1:]], choices[field]):
+        posted = {**choices, field: selected}
+        assert authenticated_client.post(path, data=posted).status_code == 302
+        active = "Spanish" in selected
+        with app.app_context():
+            listing = db.session.get(Listing, original_id)
+            assert listing is not None
+            assert listing.is_active == active
+            assert (listing.level, listing.description, listing.created_at) == (
+                "advanced", "Keep my conversation lesson details.", created_at
+            )
+            assert Listing.query.filter_by(
+                user_id=user_id, skill_id=listing.skill_id, type=listing_type
+            ).count() == 1
+            assert db.session.get(Listing, opposite_id).is_active
+            other_listing = db.session.get(Listing, other_listing_id)
+            assert other_listing.is_active
+            assert other_listing.description == "Another person's details"
+        page = authenticated_client.get("/profile?tab=skills").get_data(as_text=True)
+        assert (f'name="{field}" value="Spanish" checked' in page) == active
+        assert (account_card in observer.get(dashboard).get_data(as_text=True)) == active

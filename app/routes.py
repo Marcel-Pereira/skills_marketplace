@@ -30,7 +30,7 @@ def get_user_skills(user, listing_type):
 
 
 def save_user_skills(user, listing_type, skill_names, commit=True):
-    """Update selected skills without replacing unchanged listings."""
+    """Keep listing details when a skill is removed and later selected again."""
 
     names = list(dict.fromkeys(
         name.strip()
@@ -43,15 +43,14 @@ def save_user_skills(user, listing_type, skill_names, commit=True):
         type=listing_type
     ).all()
 
-    # Keep existing listings for skills that remain selected.
+    # Include inactive listings so selecting them again restores their details.
     existing_by_name = {
         listing.skill.name: listing for listing in existing
     }
 
-    # Delete only skills the user actually removed.
+    # Inactive listings are hidden from profiles and dashboard matching.
     for name, listing in existing_by_name.items():
-        if name not in names:
-            db.session.delete(listing)
+        listing.is_active = name in names
 
     # Add only newly selected skills.
     for name in names:
