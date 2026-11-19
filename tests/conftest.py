@@ -24,10 +24,12 @@ def catalog(app):
 
 @pytest.fixture
 def saved_skills(app, user_id):
-    """Read what the signed-in test user has saved: saved_skills("learn") gives skill names."""
+    """Read active skill choices saved for the signed-in test user."""
     def read(listing_type):
         with app.app_context():
-            listings = Listing.query.filter_by(user_id=user_id, type=listing_type).all()
+            listings = Listing.query.filter_by(
+                user_id=user_id, type=listing_type, is_active=True
+            ).all()
             return sorted(listing.skill.name for listing in listings)
     return read
 
