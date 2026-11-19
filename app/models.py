@@ -24,6 +24,13 @@ def calculate_age(date_of_birth, today=None):
 # User table, has login info and profile info
 class User(UserMixin, db.Model):
     __tablename__ = "users"  # "user" is a reserved word in PostgreSQL
+    __table_args__ = (
+        db.CheckConstraint("points >= 0", name="ck_users_points"),
+        db.CheckConstraint(
+            "reserved_points >= 0 AND reserved_points <= points",
+            name="ck_users_reserved_points",
+        ),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), nullable=False, unique=True)
@@ -33,6 +40,8 @@ class User(UserMixin, db.Model):
     country_code = db.Column(db.String(2), index=True)  # ISO 3166, e.g. 'AR'
     timezone = db.Column(db.String(50), index=True)     # IANA name
     date_of_birth = db.Column(db.Date)
+    points = db.Column(db.Integer, nullable=False, default=3, server_default="3")
+    reserved_points = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
 
     listings = db.relationship("Listing", back_populates="user")
@@ -40,6 +49,10 @@ class User(UserMixin, db.Model):
     @property
     def age(self):
         return calculate_age(self.date_of_birth)
+
+    @property
+    def available_points(self):
+        return self.points - self.reserved_points
 
     def set_password(self, password):
         """Hash a plaintext password before storing it."""
@@ -108,3 +121,40 @@ class Listing(db.Model):
 
     user = db.relationship("User", back_populates="listings")
     skill = db.relationship("Skill", back_populates="listings")
+
+
+class Lesson(db.Model):
+    """A booked lesson reserves one learner point until completion or cancellation."""
+
+    __tablename__ = "lessons"
+    __table_args__ = (
+        db.CheckConstraint("teacher_id != learner_id", name="ck_lesson_participants"),
+        db.CheckConstraint(
+            "status IN ('scheduled', 'completed', 'cancelled')", name="ck_lesson_status"
+        ),
+        db.CheckConstraint(
+            "status != 'completed' OR (teacher_confirmed_at IS NOT NULL "
+            "AND learner_confirmed_at IS NOT NULL AND completed_at IS NOT NULL)",
+            name="ck_lesson_completion",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    teacher_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    learner_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    skill_id = db.Column(db.Integer, db.ForeignKey("skills.id"), nullable=False)
+    scheduled_at = db.Column(db.DateTime, nullable=False)
+    status = db.Column(db.String(10), nullable=False, default="scheduled")
+    booking_key = db.Column(db.String(36), nullable=False, unique=True)
+    teacher_confirmed_at = db.Column(db.DateTime)
+    learner_confirmed_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+    teacher = db.relationship("User", foreign_keys=[teacher_id])
+    learner = db.relationship("User", foreign_keys=[learner_id])
+    skill = db.relationship("Skill")
+
+    @property
+    def can_confirm(self):
+        return self.status == "scheduled" and self.scheduled_at <= utcnow().replace(tzinfo=None)

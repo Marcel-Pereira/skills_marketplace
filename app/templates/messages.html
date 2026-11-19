@@ -2,7 +2,7 @@
 {% from "_macros.html" import signed_in_nav %}
 {% block title %}Messages{% endblock %}
 {% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
-{% block nav_links %}{{ signed_in_nav() }}{% endblock %}
+{% block nav_links %}{{ signed_in_nav(current_user) }}{% endblock %}
 {% block content %}
   <h1>Messages</h1>
 

@@ -2,7 +2,7 @@
 {% from "_macros.html" import chip_picker, signed_in_nav %}
 {% block title %}Profile{% endblock %}
 {% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
-{% block nav_links %}{{ signed_in_nav() }}{% endblock %}
+{% block nav_links %}{{ signed_in_nav(current_user) }}{% endblock %}
 {% block content %}
     <div class="profile">
         <h1>Your profile</h1>

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "_macros.html" import signed_in_nav %}
+{% block title %}Book a lesson{% endblock %}
+{% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
+{% block nav_links %}{{ signed_in_nav(current_user) }}{% endblock %}
+{% block content %}
+  <div class="lessons-page">
+    <p><a href="{{ url_for('main.chat', name=teacher.username) }}">Back to chat</a></p>
+    <h1>Learn from {{ teacher.username }}</h1>
+    <p>Agree on a time with {{ teacher.username }} before booking. One point will be reserved until the lesson is completed or cancelled.</p>
+    <p>You have {{ current_user.available_points }} point{{ 's' if current_user.available_points != 1 }} available.</p>
+    {% if skills and current_user.available_points > 0 %}
+      <form method="post" class="stack lesson-booking">
+        <input type="hidden" name="lesson_form_token" value="{{ lesson_form_token }}">
+        <input type="hidden" name="booking_key" value="{{ booking_key }}">
+        <label for="lesson-skill">Skill
+          <select id="lesson-skill" name="skill_id" required>
+            <option value="">Choose a skill</option>
+            {% for skill in skills %}
+              <option value="{{ skill.id }}" {% if values.skill_id | string == skill.id | string %}selected{% endif %}>{{ skill.name }} ({{ skill.category.name }})</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label for="lesson-time">Date and time in UTC
+          <input id="lesson-time" name="scheduled_at" type="datetime-local" value="{{ values.scheduled_at }}" min="{{ min_time }}" required aria-describedby="lesson-time-help">
+        </label>
+        <p class="muted" id="lesson-time-help">Enter the agreed time in Coordinated Universal Time (UTC).</p>
+        <button type="submit">Book and reserve one point</button>
+      </form>
+    {% elif not skills %}
+      <p>{{ teacher.username }} has no teaching skills listed yet.</p>
+    {% else %}
+      <p>You need one available point to book. Teach a lesson to earn a point, or cancel a lesson that neither person has confirmed.</p>
+      <p><a href="{{ url_for('lessons.index') }}">View your lessons</a></p>
+    {% endif %}
+  </div>
+{% endblock %}

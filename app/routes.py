@@ -506,4 +506,6 @@ def chat(name):
         # Redirect after sending, so refreshing the page doesn't send the message twice
         return redirect(url_for("main.chat", name=name))
 
-    return render_template("chat.html", name=name, conversation=conversation)
+    return render_template(
+        "chat.html", name=name, conversation=conversation, other_user=other_user
+    )
