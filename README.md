@@ -33,9 +33,24 @@ server and run this from the project root after installing the requirements:
 ```
 
 On Windows, use `.\.venv\Scripts\python.exe -m flask --app run upgrade-db`.
-The command adds the optional date-of-birth column while preserving accounts and
-profile data. `db.create_all()` does not upgrade existing tables, so run the command 
+The command adds missing profile and points columns while preserving accounts and
+profile data. Existing accounts start with 3 points and no reservations. Running
+the command again preserves their balances. `db.create_all()` does not upgrade existing tables, so run the command
 before serving an existing database.
+
+### Lessons and points
+
+Everyone starts with 3 points. Open another person's chat and select **Book a lesson**
+to choose one of their teaching skills and a future time in Coordinated Universal
+Time (UTC). Agree on the time with them first. Booking reserves one available point.
+The **Lessons** page shows your balance, reservations and saved lessons.
+
+After the scheduled time, both people select **Confirm lesson happened**. The learner
+spends one point and the teacher earns one, once per lesson. Either participant can
+cancel before anyone confirms, releasing the reservation. After one confirmation,
+the lesson and point stay pending until the other person confirms. A learner with
+no available points must earn a point or cancel an unconfirmed booking before booking
+another lesson.
 
 ### Command shortcuts
 

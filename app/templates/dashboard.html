@@ -2,7 +2,7 @@
 {% from "_macros.html" import signed_in_nav %}
 {% block title %}Dashboard{% endblock %}
 {% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
-{% block nav_links %}{{ signed_in_nav() }}{% endblock %}
+{% block nav_links %}{{ signed_in_nav(current_user) }}{% endblock %}
 {% block content %}
   {# Mode switch: two links that reload the page with ?mode=learner or ?mode=sharer #}
   <div class="mode-switch">

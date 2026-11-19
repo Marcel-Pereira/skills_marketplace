@@ -2,10 +2,11 @@
 {% from "_macros.html" import signed_in_nav %}
 {% block title %}Chat with {{ name }}{% endblock %}
 {% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
-{% block nav_links %}{{ signed_in_nav() }}{% endblock %}
+{% block nav_links %}{{ signed_in_nav(current_user) }}{% endblock %}
 {% block content %}
   <p><a href="{{ url_for('main.messages') }}">← All messages</a></p>
   <h1>{{ name }}</h1>
+  <p><a class="button secondary" href="{{ url_for('lessons.book', teacher_id=other_user.id) }}">Book a lesson</a></p>
 
   {# My messages sit on the right in dark, theirs on the left in grey #}
   <div class="chat">

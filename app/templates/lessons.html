@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "_macros.html" import signed_in_nav %}
+{% block title %}Your lessons{% endblock %}
+{% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
+{% block nav_links %}{{ signed_in_nav(current_user) }}{% endblock %}
+{% block content %}
+  <div class="lessons-page">
+    <h1>Your lessons</h1>
+    <dl class="points-summary" aria-label="Your points">
+      <div><dt>Balance</dt><dd>{{ current_user.points }} point{{ 's' if current_user.points != 1 }}</dd></div>
+      <div><dt>Reserved for lessons</dt><dd>{{ current_user.reserved_points }} point{{ 's' if current_user.reserved_points != 1 }}</dd></div>
+      <div><dt>Available to book</dt><dd>{{ current_user.available_points }} point{{ 's' if current_user.available_points != 1 }}</dd></div>
+    </dl>
+    <p>Booking reserves one point. After the scheduled time, both people confirm the lesson happened. The learner then spends one point and the teacher earns one.</p>
+    <p class="muted">If one person has confirmed, the lesson stays pending and the point stays reserved until the other person confirms.</p>
+
+    {% for lesson in lessons %}
+      {% set teaching = lesson.teacher_id == current_user.id %}
+      {% set other_person = lesson.learner if teaching else lesson.teacher %}
+      {% set your_confirmation = lesson.teacher_confirmed_at if teaching else lesson.learner_confirmed_at %}
+      <article class="card lesson-card" aria-labelledby="lesson-{{ lesson.id }}">
+        <div class="lesson-heading">
+          <h2 id="lesson-{{ lesson.id }}">{{ lesson.skill.name }}</h2>
+          <span class="lesson-status">{{ lesson.status | capitalize }}</span>
+        </div>
+        <p>{{ 'Teaching' if teaching else 'Learning with' }} {{ other_person.username }}</p>
+        <p><time datetime="{{ lesson.scheduled_at.isoformat() }}Z">{{ lesson.scheduled_at.strftime('%d %B %Y at %H:%M') }}</time> UTC</p>
+        {% if lesson.status == 'scheduled' %}
+          <p>Teacher {{ 'confirmed' if lesson.teacher_confirmed_at else 'has not confirmed' }}. Learner {{ 'confirmed' if lesson.learner_confirmed_at else 'has not confirmed' }}.</p>
+          {% if your_confirmation %}
+            <p>You confirmed this lesson. Waiting for {{ other_person.username }}.</p>
+          {% elif not lesson.can_confirm %}
+            <p class="muted">Confirm after the scheduled time, once the lesson has happened.</p>
+          {% endif %}
+          <div class="actions lesson-actions">
+            {% if lesson.can_confirm and not your_confirmation %}
+              <form method="post" action="{{ url_for('lessons.confirm', lesson_id=lesson.id) }}">
+                <input type="hidden" name="lesson_form_token" value="{{ lesson_form_token }}">
+                <button type="submit">Confirm lesson happened</button>
+              </form>
+            {% endif %}
+            {% if not lesson.teacher_confirmed_at and not lesson.learner_confirmed_at %}
+              <form method="post" action="{{ url_for('lessons.cancel', lesson_id=lesson.id) }}">
+                <input type="hidden" name="lesson_form_token" value="{{ lesson_form_token }}">
+                <button type="submit" class="secondary">Cancel lesson</button>
+              </form>
+            {% endif %}
+            <a href="{{ url_for('main.chat', name=other_person.username) }}">Open chat</a>
+          </div>
+          {% if not lesson.teacher_confirmed_at and not lesson.learner_confirmed_at %}
+            <p class="muted">Either person can cancel before anyone confirms. The reserved point becomes available again.</p>
+          {% endif %}
+        {% elif lesson.status == 'completed' %}
+          <p>{{ 'You earned one point.' if teaching else 'You spent one point.' }}</p>
+        {% else %}
+          <p>The reserved point was released.</p>
+        {% endif %}
+      </article>
+    {% else %}
+      <p>You have no lessons yet. <a href="{{ url_for('main.dashboard', mode='learner') }}">Find someone to learn from</a> and book a lesson from their chat.</p>
+    {% endfor %}
+  </div>
+{% endblock %}

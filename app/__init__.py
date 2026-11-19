@@ -21,6 +21,9 @@ def create_app(test_config=None):
     from app.routes import main
     app.register_blueprint(main)
 
+    from app.lessons import lessons
+    app.register_blueprint(lessons)
+
     from app.commands import upgrade_db_command
     app.cli.add_command(upgrade_db_command)
 
