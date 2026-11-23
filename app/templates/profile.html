@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import chip_picker, signed_in_nav %}
+{% from "_macros.html" import chip_picker, signed_in_nav, suggest_skill_form %}
 {% block title %}Profile{% endblock %}
 {% block home_url %}{{ url_for('main.dashboard') }}{% endblock %}
 {% block nav_links %}{{ signed_in_nav() }}{% endblock %}
@@ -74,6 +74,7 @@
               <button type="submit" name="then" value="filter" class="secondary">Save and filter by these</button>
             </div>
           </form>
+          {{ suggest_skill_form(categories) }}
         {% endif %}
     </div>
 {% endblock %}

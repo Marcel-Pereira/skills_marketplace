@@ -62,6 +62,38 @@
   </div>
 {% endmacro %}
 
+{# Form to ask for a skill that is not in the catalog. Frontend only for now (issue #20):
+   the submit button is disabled and no route handles it, so nothing is sent or saved.
+   Users still cannot add skills themselves; an admin will review suggestions later.
+   Place it OUTSIDE the skills <form>: HTML does not allow a form inside a form.
+   "categories" is the list from get_categories() in routes.py. #}
+{% macro suggest_skill_form(categories) %}
+  <form method="post" class="profile-suggest" id="suggest-skill">
+    <section class="card profile-section" aria-labelledby="suggest-skill-title">
+      <h2 id="suggest-skill-title">Can't find a skill?</h2>
+      <p class="muted">Suggest it and an admin will review it. Sending suggestions isn't available yet.</p>
+      <div class="profile-fields">
+        <div class="profile-field">
+          <label for="suggest-name">Skill name</label>
+          <input id="suggest-name" name="suggested_name" type="text" maxlength="100" required placeholder="e.g. Origami">
+        </div>
+        <div class="profile-field">
+          <label for="suggest-category">Closest area</label>
+          <select id="suggest-category" name="suggested_category_id">
+            <option value="">Not sure</option>
+            {% for category in categories %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="profile-field profile-field-wide">
+          <label for="suggest-note">Anything else we should know? (optional)</label>
+          <textarea id="suggest-note" name="suggested_note" rows="3" maxlength="500"></textarea>
+        </div>
+      </div>
+      <div class="actions profile-actions"><button type="submit" disabled>Send suggestion</button></div>
+    </section>
+  </form>
+{% endmacro %}
+
 {# Links shown in the nav once someone is signed in #}
 {% macro signed_in_nav() %}
   <div class="signed-in-nav">
