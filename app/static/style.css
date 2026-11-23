@@ -134,6 +134,8 @@ label.chip { cursor: pointer; }
 .profile-skills .chip { position: relative; }
 .profile-skills .chip input { display: block; position: absolute; width: 1px; height: 1px; opacity: 0; }
 .profile-skills .chip:has(input:focus-visible) { outline: 2px solid #222; outline-offset: 2px; }
+.profile-suggest { margin-top: 32px; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }  /* a disabled button must not look clickable */
 .profile h1 {
     margin: 0
 }
