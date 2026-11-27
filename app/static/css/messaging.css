@@ -1,0 +1,10 @@
+/* Messages list: each conversation is a clickable card. */
+.conversation { display: block; color: inherit; text-decoration: none; }
+.conversation p { margin: 4px 0 0; }
+
+/* Chat layout, bubbles and composer stay inside the chat page wrapper. */
+.chat-page .chat { display: flex; flex-direction: column; gap: 8px; margin: 24px 0; }
+.chat-page .message { max-width: 70%; margin: 0; padding: 8px 14px; border-radius: 12px; background: #f0f0f0; align-self: flex-start; }
+.chat-page .message.mine { background: #222; color: #fff; align-self: flex-end; }
+.chat-page .send { display: flex; gap: 8px; }
+.chat-page .send input { flex: 1; }

@@ -52,7 +52,7 @@ def test_unknown_skills_do_not_count(authenticated_client, catalog, path, field,
 
 def test_onboarding_says_pick_at_least_3(authenticated_client, catalog):
     page = authenticated_client.get("/onboarding/learn").data.decode()
-    assert "Pick at least 3." in page
+    assert "Pick at least 3 skills." in page
     assert "Pick as many as you like." not in page
 
 
@@ -81,3 +81,12 @@ def test_profile_save_and_filter_is_refused_with_too_few(authenticated_client, c
     assert response.status_code == 400  # no redirect to the dashboard
     assert b"to learn (you picked 1)" in response.data
     assert b"to teach (you picked 1)" in response.data
+
+
+def test_too_few_skills_shows_the_error_as_a_styled_alert(authenticated_client, catalog):
+    """The error must use the "flash error" box (styled in style.css), not plain text."""
+    response = authenticated_client.post("/onboarding/learn", data={"learns": ["Spanish"]})
+    page = response.data.decode()
+
+    assert response.status_code == 400
+    assert '<div class="flash error" role="alert">Pick at least 3 skills to learn (you picked 1).</div>' in page

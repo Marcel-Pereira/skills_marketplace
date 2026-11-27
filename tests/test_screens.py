@@ -1,3 +1,4 @@
+import re
 import pytest
 
 from app.sample_data import PEOPLE
@@ -166,8 +167,8 @@ def test_skill_filter_shows_selected_skills(authenticated_client, catalog):
     assert 'value="Spanish"' in page
     assert "checked" in page
 
-    # The filter form should use the single-skill filtering mode.
-    assert 'name="filter" value="skill"' in page
+    # The By Skill form keeps the primary filter (Everyone) while skills are picked.
+    assert 'name="filter" value="default"' in page
 
     # The user should be able to switch back to Everyone or My Profile.
     assert "Everyone" in page
@@ -325,7 +326,7 @@ def test_users_have_separate_skill_profiles(app, client, user_id, catalog):
     response = client.post(
         "/login",
         data={
-            "email": "test@example.com",
+            "username": "test@example.com",
             "password": "secret-password"
         }
     )
@@ -357,7 +358,7 @@ def test_users_have_separate_skill_profiles(app, client, user_id, catalog):
     response = client.post(
         "/login",
         data={
-            "email": "second@example.com",
+            "username": "second@example.com",
             "password": "second-password"
         }
     )
@@ -389,7 +390,7 @@ def test_users_have_separate_skill_profiles(app, client, user_id, catalog):
     client.post(
         "/login",
         data={
-            "email": "test@example.com",
+            "username": "test@example.com",
             "password": "secret-password"
         }
     )
@@ -514,12 +515,13 @@ def test_sharer_single_skill_filter(
 def test_by_skill_works_independently_of_profile(
     authenticated_client, matching_data
 ):
-    """Selecting Mandarin finds Mandarin teachers without requiring it in my profile."""
+    """With Everyone, picking Mandarin Chinese finds its teachers even though it isn't in my profile."""
     page = authenticated_client.get(
-        "/dashboard?mode=learner&filter=skill&skill=Mandarin"
+        "/dashboard?mode=learner&filter=default&skill=Mandarin+Chinese"
     ).data
-    assert b"Wei" in page
-    assert b"Mateo" not in page
+    # Check the names on the cards: plain b"Wei" would also match "Weightlifting" in the list.
+    assert b"<h3>Wei</h3>" in page
+    assert b"<h3>Mateo</h3>" not in page
 
 def test_inactive_skill_listing_is_not_a_match(
     app, authenticated_client, matching_data
@@ -674,3 +676,31 @@ def test_profile_save_preserves_listing_details(
         assert listing.id == original_id
         assert listing.level == "advanced"
         assert listing.description == "I want to practice conversation."
+
+
+def test_skill_filter_applies_instantly_and_shows_picked_skills_as_chips(authenticated_client, matching_data):
+    """Ticking a skill submits the filter right away, and picked skills are small removable chips."""
+    page = authenticated_client.get(
+        "/dashboard?mode=learner&filter=skill&skill=Spanish"
+    ).data.decode()
+
+    assert 'onchange="this.submit()"' in page
+    assert ">Apply<" not in page
+    assert 'class="chip remove-chip"' in page and 'value="Spanish"' in page
+
+
+def test_by_skill_narrows_my_profile_and_keeps_it_selected(authenticated_client, matching_data):
+    """By Skill is a second filter: with My Profile on, it lists only my skills and narrows my matches."""
+    # My learning skills are Spanish, Guitar and Graphic Design (see matching_data).
+    page = authenticated_client.get("/dashboard?mode=learner&filter=profile").data.decode()
+    assert 'value="Spanish"' in page and 'value="Graphic Design"' in page
+    assert 'value="Python"' not in page  # not one of my learning skills, so not offered
+
+    page = authenticated_client.get(
+        "/dashboard?mode=learner&filter=profile&skill=Graphic+Design"
+    ).data.decode()
+    assert "<h3>Jiwoo</h3>" in page        # teaches Graphic Design
+    assert "<h3>Mateo</h3>" not in page    # matches my profile, but not the picked skill
+    assert 'name="filter" value="profile"' in page
+    # My Profile stays the highlighted (dark) button while a skill is picked
+    assert re.search(r'class="button"\s+href="/dashboard\?mode=learner&amp;filter=profile"', page)

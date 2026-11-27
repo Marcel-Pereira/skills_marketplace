@@ -81,7 +81,9 @@ def save_user_skills(user, listing_type, skill_names, commit=True):
 
 @main.route("/")
 def index():
-    return render_template("index.html")
+    if current_user.is_authenticated:
+        return redirect(url_for("main.dashboard"))
+    return redirect(url_for("main.login"))
 
 
 # --- Accounts ---
@@ -95,12 +97,15 @@ def signup():
         email = request.form.get("email", "").strip().lower()
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        bio = request.form.get("bio", "").strip() or None
-        country_code = request.form.get("country_code", "").strip().upper() or None
-        timezone = request.form.get("timezone", "").strip() or None
+        confirm_password = request.form.get("confirm_password", "")
 
         if not email or not username or not password:
             flash("Email, username, and password are required.", "error")
+            return render_template("signup.html"), 400
+
+        # Typing the password twice catches typos before the account is created.
+        if password != confirm_password:
+            flash("Passwords do not match.", "error")
             return render_template("signup.html"), 400
 
         existing_user = User.query.filter(
@@ -110,13 +115,7 @@ def signup():
             flash("That email or username is already registered.", "error")
             return render_template("signup.html"), 409
 
-        user = User(
-            email=email,
-            username=username,
-            bio=bio,
-            country_code=country_code,
-            timezone=timezone,
-        )
+        user = User(email=email, username=username)
         user.set_password(password)
         db.session.add(user)
 
@@ -138,13 +137,18 @@ def login():
         return redirect(url_for("main.dashboard"))
 
     if request.method == "POST":
-        email = request.form.get("email", "").strip().lower()
+        # One box accepts either the email or the username, since people often forget one.
+        # Emails are saved in lowercase (see signup), so compare the email in lowercase too.
+        login_name = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        user = User.query.filter_by(email=email).first()
+        user = User.query.filter(
+            or_(User.email == login_name.lower(), User.username == login_name)
+        ).first() if login_name else None
 
         if user is None or not user.check_password(password):
-            flash("Invalid email or password.", "error")
-            return render_template("login.html"), 401
+            return render_template(
+                "login.html", login_error="Invalid email/username or password."
+            ), 401
 
         login_user(user)
         return redirect(url_for("main.dashboard"))
@@ -187,6 +191,18 @@ def clean_selection(names):
     return list(dict.fromkeys(only_catalog_skills(names)))
 
 
+def picked_skills(field, categories):
+    """The skills picked in one picker. Closing an area deselects its skills: the picker sends
+    {field}_shown together with the open areas, so skills in closed areas are dropped.
+    (A form without {field}_shown, like a hand-made request, keeps every catalog skill sent.)"""
+    chosen = clean_selection(request.form.getlist(field))
+    if request.form.get(f"{field}_shown"):
+        open_ids = set(request.form.getlist(f"{field}_areas"))
+        area_of = {skill.name: str(category.id) for category in categories for skill in category.skills}
+        chosen = [name for name in chosen if area_of.get(name) in open_ids]
+    return chosen
+
+
 def min_skills_error(skills, purpose):
     """Error message when fewer than MIN_SKILLS were picked, otherwise None.
     purpose finishes the sentence, e.g. "to learn" or "to teach"."""
@@ -213,12 +229,20 @@ def picker_state(field, selected, categories, form=None, searching=False):
     user pressed Search; on any other submit it is ignored."""
     query = form.get(f"{field}_q", "").strip() if form is not None and searching else ""
     results = search_skills(categories, query)
+    open_areas = form.getlist(f"{field}_areas") if form is not None else []
+
+    # Search opens the area of every matching skill, so the matches show up in their areas.
+    # When exactly one skill matches (e.g. "yoga"), it is picked too.
+    open_areas = open_areas + [str(category.id) for _, category in results]
+    if len(results) == 1 and results[0][0].name not in selected:
+        selected = selected + [results[0][0].name]
+
     return {
         "selected": selected,
-        "open_areas": form.getlist(f"{field}_areas") if form is not None else [],
+        "open_areas": open_areas,
         "query": query,
-        "results": results,
-        "result_ids": {skill.id for skill, _ in results},
+        "no_match": bool(query) and not results,
+        "min_skills": MIN_SKILLS,
     }
 
 # --- Onboarding ---
@@ -239,7 +263,7 @@ def onboarding_step(step, question, field, purpose, next_endpoint):
                                min_skills=MIN_SKILLS), status
 
     if request.method == "POST":
-        chosen = clean_selection(request.form.getlist(field))
+        chosen = picked_skills(field, categories)
         if request.form.get("action") == "search":
             return render(chosen, searching=True)
         error = min_skills_error(chosen, purpose)
@@ -283,38 +307,35 @@ def dashboard():
         my_skills = get_user_skills(current_user, "learn")
         their_type = "teach"
 
-    # Choose how to filter people on the Learner or Sharer dashboard.
+    # Primary filter: Everyone ("default") or My Profile ("profile"); one is always selected.
+    # Older links used filter=skill for By Skill; those now mean Everyone plus the picked skills.
     filter_mode = request.args.get("filter", "default")
-
-    if filter_mode not in ("default", "skill", "profile"):
+    if filter_mode not in ("default", "profile"):
         filter_mode = "default"
 
-    # Keep supporting the MVP's existing ?skill=... links.
-    picked = request.args.getlist("skill")
+    # Secondary filter: By Skill narrows the primary one. In My Profile, only my own
+    # skills can be picked. Clicking a chip's x removes only that skill.
+    picked = clean_selection(request.args.getlist("skill"))
+    if filter_mode == "profile":
+        picked = [skill for skill in picked if skill in my_skills]
+    removed = request.args.get("remove_skill")
+    if removed in picked:
+        picked.remove(removed)
 
-
-    if filter_mode == "skill" or (filter_mode == "default" and picked):
-        # By Skill: show people offering/requesting the selected skill.
-        # Keep compatibility with the MVP's existing ?skill=... links.
-        # Match any selected skill, not just the first one.
-        picked = clean_selection(picked)
-
-        # Clicking a chip removes only that skill.
-        removed = request.args.get("remove_skill")
-        if removed in picked:
-            picked.remove(removed)
-
-        wanted = picked
-
+    if picked:
+        wanted = picked            # people with at least one of the picked skills
     elif filter_mode == "profile":
-        # My Profile: use skills saved in the signed-in user's profile.
-        wanted = my_skills
-        picked = []
-
+        wanted = my_skills         # people matching my saved skills
     else:
-        # Default: show all active listings in the chosen direction.
-        wanted = None
-        picked = []
+        wanted = None              # everyone with an active listing
+
+    # The By Skill list: every catalog skill for Everyone, only my own skills for My Profile.
+    skill_groups = []
+    for category in get_categories():
+        names = [skill.name for skill in category.skills
+                 if filter_mode != "profile" or skill.name in my_skills]
+        if names:
+            skill_groups.append((category.name, names))
 
     # Find active listings from other users in the database.
     listings = Listing.query.filter(
@@ -371,7 +392,7 @@ def dashboard():
         mode=mode,
         filter_mode=filter_mode,
         picked=picked,
-        categories=get_categories(),
+        skill_groups=skill_groups,
         matches=matches
     )
 
@@ -426,8 +447,8 @@ def profile():
             abort(400)
 
         active_tab = "skills"
-        learns = clean_selection(request.form.getlist("learns"))
-        teaches = clean_selection(request.form.getlist("teaches"))
+        learns = picked_skills("learns", categories)
+        teaches = picked_skills("teaches", categories)
         if request.form.get("action") == "search":
             return render(learns, teaches, searching=True)
 

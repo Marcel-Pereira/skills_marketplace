@@ -4,11 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Skills Marketplace{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  {% block page_styles %}{% endblock %}
 </head>
 <body>
   <nav>
-    {# The logo goes to the welcome page; signed-in pages override home_url to go to the dashboard #}
+    {# The logo uses the default entry route; signed-in pages link directly to the dashboard #}
     <a class="brand" href="{% block home_url %}{{ url_for('main.index') }}{% endblock %}">Skills Marketplace</a>
     {# Pages add their own links here, e.g. the dashboard adds "Sign out" #}
     {% block nav_links %}{% endblock %}

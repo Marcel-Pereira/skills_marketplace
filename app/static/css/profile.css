@@ -1,0 +1,22 @@
+/* Profile layout and fields stay inside the existing profile wrapper. */
+.profile h1 { margin: 0; }
+.profile .profile-identity { overflow-wrap: anywhere; margin: 6px 0px 32px; font-size: 24px; font-weight: bold; }
+.profile .profile-tabs { padding: 0; margin: 0 0 16px; }
+.profile .profile-section h2 { margin: 0 0 18px; font-size: 1.25em; }
+.profile .profile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.profile .profile-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.profile .profile-field-wide { grid-column: 1 / -1; }
+.profile .profile-field input, .profile .profile-field select, .profile .profile-field textarea { width: 100%; min-width: 0; box-sizing: border-box; }
+.profile .profile-field textarea { font: inherit; padding: 8px; border: 1px solid #ccc; border-radius: 6px; resize: vertical; }
+.profile .profile-age { align-self: end; margin: 0; padding-bottom: 8px; }
+.profile .profile-error { color: #b42318; margin: 0; }
+.profile .profile-field [aria-invalid="true"] { border-color: #b42318; }
+.profile .profile-actions { flex-wrap: wrap; }
+.profile .profile-skills .chip { position: relative; }
+.profile .profile-skills .chip input { display: block; position: absolute; width: 1px; height: 1px; opacity: 0; }
+.profile .profile-skills .chip:has(input:focus-visible) { outline: 2px solid #222; outline-offset: 2px; }
+
+@media (max-width: 600px) {
+  .profile .profile-fields { grid-template-columns: minmax(0, 1fr); }
+  .profile .profile-age { padding-bottom: 0; }
+}
